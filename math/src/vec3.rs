@@ -1,5 +1,19 @@
 use std::ops::{Add, Sub, Mul, Div};
 
+
+/// A 3d vector represented by f32 fields, x, y, and z.
+/// 
+/// Generics considered here but it's unlikley for the benefits to be worth the complication at this stage.
+/// Additionally, if for example we wanted to use a vec3 to iterate through a grid using u32s or similar, 
+/// that would be a different object entirley anyway (Coord)
+/// It's unlikley that more precision will be necessary anyway. 
+/// 
+/// Why not use nalgebra/glam?
+/// 1) I want control
+/// 2) I want to learn
+/// 3) It's not that much work
+/// 4) There's good chance I test/implement tolerances and material conditions,
+/// and building wrapper implementations would probably be annoying
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Vec3 {
     pub x: f32, 
@@ -16,15 +30,15 @@ impl Vec3 {
         Self {x: 0.0, y: 0.0, z: 0.0, }
     }
 
-    pub const fn x() -> Self {
+    pub const fn unit_x() -> Self {
         Self {x: 1.0, y: 0.0, z: 0.0, }
     }
 
-    pub const fn y() -> Self {
+    pub const fn unit_y() -> Self {
         Self {x: 0.0, y: 1.0, z: 0.0, }
     }
 
-    pub const fn z() -> Self {
+    pub const fn unit_z() -> Self {
         Self {x: 0.0, y: 0.0, z: 1.0, }
     }
 
@@ -36,15 +50,15 @@ impl Vec3 {
         Self {x: f32::MIN, y: f32::MIN, z: f32::MIN, }
     }
 
-    pub fn vec_add(&self, rhs: &Vec3) -> Self {
+    pub fn vec_add(&self, other: Self) -> Self {
         Self {
-            x: self.x + rhs.x,
-            y: self.y + rhs.y,
-            z: self.z + rhs.z,
+            x: self.x + other.x,
+            y: self.y + other.y,
+            z: self.z + other.z,
         }
     }
 
-    pub fn vec_sub(&self, rhs: &Vec3) -> Self {
+    pub fn vec_sub(&self, rhs: Self) -> Self {
         Self {
             x: self.x - rhs.x,
             y: self.y - rhs.y,
@@ -52,15 +66,15 @@ impl Vec3 {
         }
     }
 
-    pub fn vec_mul(&self, rhs: &Vec3) -> Self {
+    pub fn vec_mul(&self, other: Self) -> Self {
         Self {
-            x: self.x * rhs.x,
-            y: self.y * rhs.y,
-            z: self.z * rhs.z,
+            x: self.x * other.x,
+            y: self.y * other.y,
+            z: self.z * other.z,
         }
     }
 
-    pub fn vec_div(&self, rhs: &Vec3) -> Self {
+    pub fn vec_div(&self, rhs: Self) -> Self {
         Self {
             x: self.x / rhs.x,
             y: self.y / rhs.y,
@@ -68,11 +82,11 @@ impl Vec3 {
         }
     }
 
-    pub fn scalar_add(&self, rhs: f32) -> Self {
+    pub fn scalar_add(&self, other: f32) -> Self {
         Self {
-            x: self.x + rhs,
-            y: self.y + rhs,
-            z: self.z + rhs,
+            x: self.x + other,
+            y: self.y + other,
+            z: self.z + other,
         }
     }
 
@@ -84,11 +98,11 @@ impl Vec3 {
         }
     }
 
-    pub fn scalar_mul(&self, rhs: f32) -> Self {
+    pub fn scalar_mul(&self, other: f32) -> Self {
         Self {
-            x: self.x * rhs,
-            y: self.y * rhs,
-            z: self.z * rhs,
+            x: self.x * other,
+            y: self.y * other,
+            z: self.z * other,
         }
     }
 
@@ -108,10 +122,10 @@ impl Vec3 {
         }
     }
 
-    pub fn dot(&self, rhs: Vec3) -> f32 {
-        self.x * rhs.x + 
-        self.y * rhs.y + 
-        self.z * rhs.z
+    pub fn dot(&self, other: Self) -> f32 {
+        self.x * other.x + 
+        self.y * other.y + 
+        self.z * other.z
     }
 
     pub fn cross(&self, other: &Self) -> Self {
@@ -122,19 +136,19 @@ impl Vec3 {
         }
     }
 
-    pub fn len_sq(self) -> f32 {
-        self.dot(self)
+    pub fn len_sq(&self) -> f32 {
+        self.dot(*self)
          
     }
 
-    pub fn len(&self) -> f32 {
+    pub fn len(self) -> f32 {
         self.len_sq().sqrt() 
     }
 
-    pub fn normalize(&self) -> Self {
+    pub fn normalize(self) -> Self {
         let len = self.len();
         if len == 0.0 {
-            return *self;
+            return self;
         }
 
         Self {
@@ -148,11 +162,11 @@ impl Vec3 {
 impl Add<Vec3> for Vec3 {
     type Output = Vec3;
 
-    fn add(self, rhs: Vec3)  -> Vec3 {
+    fn add(self, other: Vec3)  -> Vec3 {
     Vec3 {
-            x: self.x + rhs.x,
-            y: self.y + rhs.y,
-            z: self.z + rhs.z,
+            x: self.x + other.x,
+            y: self.y + other.y,
+            z: self.z + other.z,
         }
     }
 }
@@ -160,11 +174,11 @@ impl Add<Vec3> for Vec3 {
 impl Add<f32> for Vec3 {
     type Output = Vec3;
 
-    fn add(self, rhs: f32)  -> Vec3 {
+    fn add(self, s: f32)  -> Vec3 {
     Vec3 {
-            x: self.x + rhs,
-            y: self.y + rhs,
-            z: self.z + rhs,
+            x: self.x + s,
+            y: self.y + s,
+            z: self.z + s,
         }
     }
 }
@@ -172,11 +186,11 @@ impl Add<f32> for Vec3 {
 impl Add<Vec3> for f32 {
     type Output = Vec3;
 
-    fn add(self, rhs: Vec3)  -> Vec3 {
+    fn add(self, v: Vec3)  -> Vec3 {
     Vec3 {
-            x: rhs.x + self,
-            y: rhs.y + self,
-            z: rhs.z + self,
+            x: v.x + self,
+            y: v.y + self,
+            z: v.z + self,
         }
     }
 }
@@ -208,11 +222,11 @@ impl Sub<f32> for Vec3 {
 impl Mul for Vec3 {
     type Output = Vec3;
 
-    fn mul(self, rhs: Vec3)  -> Vec3 {
+    fn mul(self, v: Vec3)  -> Vec3 {
     Vec3 {
-            x: self.x * rhs.x,
-            y: self.y * rhs.y,
-            z: self.z * rhs.z,
+            x: self.x * v.x,
+            y: self.y * v.y,
+            z: self.z * v.z,
         }
     }
 }
@@ -220,11 +234,11 @@ impl Mul for Vec3 {
 impl Mul<f32> for Vec3 {
     type Output = Vec3;
 
-    fn mul(self, rhs: f32)  -> Vec3 {
+    fn mul(self, s: f32)  -> Vec3 {
     Vec3 {
-            x: self.x * rhs,
-            y: self.y * rhs,
-            z: self.z * rhs,
+            x: self.x * s,
+            y: self.y * s,
+            z: self.z * s,
         }
     }
 }
@@ -232,11 +246,11 @@ impl Mul<f32> for Vec3 {
 impl Mul<Vec3> for f32 {
     type Output = Vec3;
 
-    fn mul(self, rhs: Vec3)  -> Vec3 {
+    fn mul(self, v: Vec3)  -> Vec3 {
     Vec3 {
-            x: self * rhs.x,
-            y: self * rhs.y,
-            z: self * rhs.z,
+            x: self * v.x,
+            y: self * v.y,
+            z: self * v.z,
         }
     }
 }
@@ -265,6 +279,10 @@ impl Div<f32> for Vec3 {
     }
 }
 
+// TODO: move into 'test' crate. 
+// Note: these test are exhaustive, not necessarily to test that the first implementation is correct, 
+// but more so for assurance that I didn't break anything with later work.
+// Additionaly, when inevitably when debugging a real cem, I don't need to manually check the math.
 #[cfg(test)]
 mod test {
     use super::*;
@@ -289,7 +307,7 @@ mod test {
 
     #[test]
     fn x() {
-        let v = Vec3::x();
+        let v = Vec3::unit_x();
         assert_eq!(v.x, 1.0);
         assert_eq!(v.y, 0.0);
         assert_eq!(v.z, 0.0);
@@ -297,7 +315,7 @@ mod test {
 
     #[test]
     fn y() {
-        let v = Vec3::y();
+        let v = Vec3::unit_y();
         assert_eq!(v.x, 0.0);
         assert_eq!(v.y, 1.0);
         assert_eq!(v.z, 0.0);
@@ -305,7 +323,7 @@ mod test {
 
     #[test]
     fn z() {
-        let v = Vec3::z();
+        let v = Vec3::unit_z();
         assert_eq!(v.x, 0.0);
         assert_eq!(v.y, 0.0);
         assert_eq!(v.z, 1.0);
@@ -330,7 +348,7 @@ mod test {
 
     #[test]
     fn vec_add_fn() {
-        let sum = A.vec_add(&B);
+        let sum = A.vec_add(B);
         assert_eq!(sum.x, 5.0);
         assert_eq!(sum.y, 7.0);
         assert_eq!(sum.z, 9.0);
@@ -346,7 +364,7 @@ mod test {
 
     #[test]
     fn vec_sub_fn() {
-        let diff = A.vec_sub(&B);
+        let diff = A.vec_sub(B);
 
         assert_eq!(diff.x, -3.0);
         assert_eq!(diff.y, -3.0);
@@ -364,7 +382,7 @@ mod test {
 
     #[test]
     fn vec_mul_fn() {
-        let prod = A.vec_mul(&B);
+        let prod = A.vec_mul(B);
 
         assert_eq!(prod.x, 4.0);
         assert_eq!(prod.y, 10.0);
@@ -382,7 +400,7 @@ mod test {
 
     #[test]
     fn vec_div_fn() {
-        let quot= A.vec_div(&B);
+        let quot= A.vec_div(B);
 
         assert_eq!(quot.x, 0.25);
         assert_eq!(quot.y, 0.40);
@@ -517,7 +535,8 @@ mod test {
         let a = Vec3::new(1.0, 0.0, 0.0);
         let b = Vec3::new(0.0, 1.0, 0.0);
         let dot = a.dot(b);
-        assert_eq!(dot, 0.0);
+
+        assert!(dot.abs() < 1e-6);
     }
 
     #[test]
