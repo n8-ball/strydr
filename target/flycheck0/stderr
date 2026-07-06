@@ -1,50 +1,12 @@
-   0.002344542s  INFO prepare_target{force=false package_id=math v0.1.0 (/Users/nateball/Documents/Workspace/strydr_dev/strydr/math) target="math"}: cargo::core::compiler::fingerprint: fingerprint error for math v0.1.0 (/Users/nateball/Documents/Workspace/strydr_dev/strydr/math)/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("math", ["lib"], "/Users/nateball/Documents/Workspace/strydr_dev/strydr/math/src/lib.rs", Edition2024) }
-   0.002367917s  INFO prepare_target{force=false package_id=math v0.1.0 (/Users/nateball/Documents/Workspace/strydr_dev/strydr/math) target="math"}: cargo::core::compiler::fingerprint:     err: failed to read `/Users/nateball/Documents/Workspace/strydr_dev/strydr/target/debug/.fingerprint/math-2edf5051ffdb7794/lib-math`
-
-Caused by:
-    No such file or directory (os error 2)
-
-Stack backtrace:
-   0: <std::backtrace::Backtrace>::create
-   1: cargo_util::paths::read_bytes
-   2: cargo_util::paths::read
-   3: cargo::core::compiler::fingerprint::_compare_old_fingerprint
-   4: cargo::core::compiler::fingerprint::prepare_target
-   5: cargo::core::compiler::compile
-   6: <cargo::core::compiler::build_runner::BuildRunner>::compile
-   7: cargo::ops::cargo_compile::compile_ws
-   8: cargo::ops::cargo_compile::compile_with_exec
-   9: cargo::ops::cargo_compile::compile
-  10: cargo::commands::check::exec
-  11: <cargo::cli::Exec>::exec
-  12: cargo::main
-  13: std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>
-  14: std::rt::lang_start::<()>::{closure#0}
-  15: std::rt::lang_start_internal
-  16: _main
-   0.004177834s  INFO prepare_target{force=false package_id=math v0.1.0 (/Users/nateball/Documents/Workspace/strydr_dev/strydr/math) target="math"}: cargo::core::compiler::fingerprint: fingerprint error for math v0.1.0 (/Users/nateball/Documents/Workspace/strydr_dev/strydr/math)/Check { test: true }/TargetInner { name_inferred: true, ..: lib_target("math", ["lib"], "/Users/nateball/Documents/Workspace/strydr_dev/strydr/math/src/lib.rs", Edition2024) }
-   0.004182917s  INFO prepare_target{force=false package_id=math v0.1.0 (/Users/nateball/Documents/Workspace/strydr_dev/strydr/math) target="math"}: cargo::core::compiler::fingerprint:     err: failed to read `/Users/nateball/Documents/Workspace/strydr_dev/strydr/target/debug/.fingerprint/math-1b0795429c488148/test-lib-math`
-
-Caused by:
-    No such file or directory (os error 2)
-
-Stack backtrace:
-   0: <std::backtrace::Backtrace>::create
-   1: cargo_util::paths::read_bytes
-   2: cargo_util::paths::read
-   3: cargo::core::compiler::fingerprint::_compare_old_fingerprint
-   4: cargo::core::compiler::fingerprint::prepare_target
-   5: cargo::core::compiler::compile
-   6: <cargo::core::compiler::build_runner::BuildRunner>::compile
-   7: cargo::ops::cargo_compile::compile_ws
-   8: cargo::ops::cargo_compile::compile_with_exec
-   9: cargo::ops::cargo_compile::compile
-  10: cargo::commands::check::exec
-  11: <cargo::cli::Exec>::exec
-  12: cargo::main
-  13: std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>
-  14: std::rt::lang_start::<()>::{closure#0}
-  15: std::rt::lang_start_internal
-  16: _main
+   0.003776042s  INFO prepare_target{force=false package_id=math v0.1.0 (/Users/nateball/Documents/Workspace/strydr_dev/strydr/math) target="math"}: cargo::core::compiler::fingerprint: stale: changed "/Users/nateball/Documents/Workspace/strydr_dev/strydr/math/src/vec3.rs"
+   0.003793584s  INFO prepare_target{force=false package_id=math v0.1.0 (/Users/nateball/Documents/Workspace/strydr_dev/strydr/math) target="math"}: cargo::core::compiler::fingerprint:           (vs) "/Users/nateball/Documents/Workspace/strydr_dev/strydr/target/debug/.fingerprint/math-2edf5051ffdb7794/dep-lib-math"
+   0.003796792s  INFO prepare_target{force=false package_id=math v0.1.0 (/Users/nateball/Documents/Workspace/strydr_dev/strydr/math) target="math"}: cargo::core::compiler::fingerprint:                FileTime { seconds: 1783316701, nanos: 793021384 } < FileTime { seconds: 1783316703, nanos: 576346703 }
+   0.003848084s  INFO prepare_target{force=false package_id=math v0.1.0 (/Users/nateball/Documents/Workspace/strydr_dev/strydr/math) target="math"}: cargo::core::compiler::fingerprint: fingerprint dirty for math v0.1.0 (/Users/nateball/Documents/Workspace/strydr_dev/strydr/math)/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("math", ["lib"], "/Users/nateball/Documents/Workspace/strydr_dev/strydr/math/src/lib.rs", Edition2024) }
+   0.003861250s  INFO prepare_target{force=false package_id=math v0.1.0 (/Users/nateball/Documents/Workspace/strydr_dev/strydr/math) target="math"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleItem(ChangedFile { reference: "/Users/nateball/Documents/Workspace/strydr_dev/strydr/target/debug/.fingerprint/math-2edf5051ffdb7794/dep-lib-math", reference_mtime: FileTime { seconds: 1783316701, nanos: 793021384 }, stale: "/Users/nateball/Documents/Workspace/strydr_dev/strydr/math/src/vec3.rs", stale_mtime: FileTime { seconds: 1783316703, nanos: 576346703 } }))
+   0.004058959s  INFO prepare_target{force=false package_id=math v0.1.0 (/Users/nateball/Documents/Workspace/strydr_dev/strydr/math) target="math"}: cargo::core::compiler::fingerprint: stale: changed "/Users/nateball/Documents/Workspace/strydr_dev/strydr/math/src/vec3.rs"
+   0.004061459s  INFO prepare_target{force=false package_id=math v0.1.0 (/Users/nateball/Documents/Workspace/strydr_dev/strydr/math) target="math"}: cargo::core::compiler::fingerprint:           (vs) "/Users/nateball/Documents/Workspace/strydr_dev/strydr/target/debug/.fingerprint/math-1b0795429c488148/dep-test-lib-math"
+   0.004063250s  INFO prepare_target{force=false package_id=math v0.1.0 (/Users/nateball/Documents/Workspace/strydr_dev/strydr/math) target="math"}: cargo::core::compiler::fingerprint:                FileTime { seconds: 1783316701, nanos: 793021967 } < FileTime { seconds: 1783316703, nanos: 576346703 }
+   0.004104125s  INFO prepare_target{force=false package_id=math v0.1.0 (/Users/nateball/Documents/Workspace/strydr_dev/strydr/math) target="math"}: cargo::core::compiler::fingerprint: fingerprint dirty for math v0.1.0 (/Users/nateball/Documents/Workspace/strydr_dev/strydr/math)/Check { test: true }/TargetInner { name_inferred: true, ..: lib_target("math", ["lib"], "/Users/nateball/Documents/Workspace/strydr_dev/strydr/math/src/lib.rs", Edition2024) }
+   0.004108250s  INFO prepare_target{force=false package_id=math v0.1.0 (/Users/nateball/Documents/Workspace/strydr_dev/strydr/math) target="math"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleItem(ChangedFile { reference: "/Users/nateball/Documents/Workspace/strydr_dev/strydr/target/debug/.fingerprint/math-1b0795429c488148/dep-test-lib-math", reference_mtime: FileTime { seconds: 1783316701, nanos: 793021967 }, stale: "/Users/nateball/Documents/Workspace/strydr_dev/strydr/math/src/vec3.rs", stale_mtime: FileTime { seconds: 1783316703, nanos: 576346703 } }))
     Checking math v0.1.0 (/Users/nateball/Documents/Workspace/strydr_dev/strydr/math)
     Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.04s
