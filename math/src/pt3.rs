@@ -15,11 +15,11 @@ pub struct Pt3 {
 }
 
 impl Pt3 {
-    const fn new(x: f32, y: f32, z: f32) -> Self {
+    pub const fn new(x: f32, y: f32, z: f32) -> Self {
         Self { x, y, z, }
     } 
 
-    const fn origin() -> Self {
+    pub const fn zero() -> Self {
         Self { x: 0.0, y: 0.0, z: 0.0, }
     } 
 
@@ -113,23 +113,23 @@ impl Sub<Vec3> for Pt3 {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
 
-    const A: Pt3 = Pt3::new(1.0, 2.0, 3.0);
-    const B: Pt3 = Pt3::new(4.0, 5.0, 6.0);
+    const A: Pt3 = Pt3 {x: 1.0, y: 2.0, z: 3.0};
+    const B: Pt3 = Pt3 {x: 4.0, y: 5.0, z: 6.0};
 
-    const O: Pt3 = Pt3::origin();
-    const POS_X: Pt3 = Pt3::new(10.0, 0.0, 0.0);
-    const POS_Y: Pt3 = Pt3::new(0.0, 10.0, 0.0);
-    const POS_Z: Pt3 = Pt3::new(0.0, 0.0, 10.0);
+    const O: Pt3 = Pt3 { x: 0.0, y: 0.0, z: 0.0 }; 
+    const POS_X: Pt3 = Pt3 { x: 10.0, y: 0.0, z: 0.0};
+    const POS_Y: Pt3 = Pt3 { x: 0.0, y: 10.0, z: 0.0};
+    const POS_Z: Pt3 = Pt3 { x: 0.0, y: 0.0, z: 10.0};
 
-    const NEG_X: Pt3 = Pt3::new(-10.0, 0.0, 0.0);
-    const NEG_Y: Pt3 = Pt3::new(0.0, -10.0, 0.0);
-    const NEG_Z: Pt3 = Pt3::new(0.0, 0.0, -10.0);
+    const NEG_X: Pt3 = Pt3 { x: -10.0, y: 0.0, z: 0.0};
+    const NEG_Y: Pt3 = Pt3 { x: 0.0, y: -10.0, z: 0.0};
+    const NEG_Z: Pt3 = Pt3 { x: 0.0, y: 0.0, z: -10.0};
 
-    const POS_COMP: Pt3 = Pt3::new(10.0, 10.0, 10.0);
-    const NEG_COMP: Pt3 = Pt3::new(-10.0, -10.0, -10.0);
+    const POS_COMP: Pt3 = Pt3 {x: 10.0, y: 10.0, z: 10.0};
+    const NEG_COMP: Pt3 = Pt3 {x: -10.0, y: -10.0, z: -10.0};
 
     #[test]
     fn get_elements() {
@@ -140,7 +140,7 @@ mod test {
 
     #[test]
     fn origin() {
-        let p = Pt3::origin();
+        let p = Pt3::zero();
 
         assert_eq!(p.x, 0.0);
         assert_eq!(p.y, 0.0);
