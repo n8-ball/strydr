@@ -1,5 +1,5 @@
-use std::ops::{Add, Sub};
-use crate::vec3::Vec3;
+use std::{fmt::{Formatter, Display}, fmt, ops::{Add, Sub}};
+use crate::{vec3::Vec3, frm3::Frm3, scalar::Scalar, axis3::Axis3};
 
 /// A 3d point represented by f32 fields, x, y, and z.
 /// 
@@ -8,30 +8,23 @@ use crate::vec3::Vec3;
 /// and let's you call functions like dot, cross, and normalize on Vec3s that represent points, resulting in bugs that compile
 /// but are difficult to track down later. 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Pt3 {
-    pub x: f32, 
-    pub y: f32, 
-    pub z: f32,
+pub struct Pt3<T: Scalar>{
+    pub x: T, 
+    pub y: T, 
+    pub z: T,
 }
 
-impl Pt3 {
-    pub const fn new(x: f32, y: f32, z: f32) -> Self {
+impl<T: Scalar> Pt3<T> {
+
+    pub const ZERO: Self = Self { x: T::ZERO, y: T::ZERO, z: T::ZERO };
+    pub const MAX: Self = Self {x: T::MAX, y: T::MAX, z: T::MAX, };
+    pub const MIN: Self = Self {x: T::MIN, y: T::MIN, z: T::MIN, };
+
+    pub const fn new(x: T , y: T , z: T) -> Self {
         Self { x, y, z, }
     } 
 
-    pub const fn zero() -> Self {
-        Self { x: 0.0, y: 0.0, z: 0.0, }
-    } 
-
-    pub const fn max() -> Self {
-        Self {x: f32::MAX, y: f32::MAX, z: f32::MAX, }
-    }
-
-    pub const fn min() -> Self {
-        Self {x: f32::MIN, y: f32::MIN, z: f32::MIN, }
-    }
-
-    pub fn translate(self, v: Vec3) -> Self {
+    pub fn translate(self, v: Vec3<T>) -> Self {
         Self {
             x: self.x + v.x,
             y: self.y + v.y,
@@ -39,36 +32,73 @@ impl Pt3 {
         }
     }
 
-    pub fn distance_to(self, other: Self) -> f32 {
+    pub fn displacement_to(self, rhs: Self) -> Vec3<T> {
+        Vec3 {
+            x: self.x - rhs.x,
+            y: self.y - rhs.y,
+            z: self.z - rhs.z,
+        }
+    }
+
+    pub fn distance_to(self, other: Self) -> T {
         (self - other).len()
     }
 
-    pub fn distance_sq_to(self, other: Self) -> f32 {
+    pub fn distance_sq_to(self, other: Self) -> T {
         (self - other).len_sq()
     }
 
-    pub fn midpoint(self, other: Self) -> Pt3 {
+    pub fn midpoint_to(self, other: Self) -> Self {
         Self {
-            x: (self.x + other.x) / 2.0,
-            y: (self.y + other.y) / 2.0,
-            z: (self.z + other.z) / 2.0,
+            x: (self.x + other.x) * T::HALF,
+            y: (self.y + other.y) * T::HALF,
+            z: (self.z + other.z) * T::HALF,
         }
     }
 
-    pub fn lerp(self, b: Self, v: f32) -> Pt3 {
+    pub fn lerp_to(self, b: Self, t: T) -> Self {
         Self {
-            x: (b.x - self.x) * v,
-            y: (b.y - self.y) * v,
-            z: (b.z - self.z) * v,
+            x: (b.x - self.x) * t,
+            y: (b.y - self.y) * t,
+            z: (b.z - self.z) * t,
         }
+    }
+
+    pub fn orient_onto_frame(self, source: Frm3<T>, destination: Frm3<T>) -> Self {
+        let source_delta = self - source.pos();
+        Self {
+            x: destination.pos().x + (source_delta.x * destination.lx().x),
+            y: destination.pos().y + (source_delta.y * destination.ly().y),
+            z: destination.pos().z + (source_delta.z * destination.lz().z),
+        } 
+    }
+
+    pub fn rotate_about_axis(self, axis: Axis3<T>, angle_radians: T) -> Self {
+        let from_axis = self - axis.pos; 
+        if from_axis.is_near_zero() {
+            return self;
+        }
+
+        let rotated_dir = from_axis.rotate_axis_angle(axis.dir, angle_radians);
+
+        axis.pos + rotated_dir
+    }
+
+    pub fn assert_near(self, b: Pt3<T>, eps: T) {
+        assert!((self.x - b.x).abs() < eps, 
+            "left x: {} != right x: {}", self.x, b.x);
+        assert!((self.y - b.y).abs() < eps,
+            "left y: {} != right y: {}", self.y, b.y);
+        assert!((self.z - b.z).abs() < eps,
+            "left z: {} != right z: {}", self.z, b.z);
     }
 }
 
-impl Add<Vec3> for Pt3 {
-    type Output = Pt3;
+impl<T: Scalar> Add<Vec3<T>> for Pt3<T> {
+    type Output = Self;
 
-    fn add(self, v: Vec3) -> Pt3 {
-        Pt3 {
+    fn add(self, v: Vec3<T>) -> Self::Output {
+        Self {
             x: self.x + v.x,
             y: self.y + v.y,
             z: self.z + v.z,
@@ -76,10 +106,10 @@ impl Add<Vec3> for Pt3 {
     }
 }
 
-impl Add<Pt3> for Vec3{
-    type Output = Pt3;
+impl<T: Scalar> Add<Pt3<T>> for Vec3<T> {
+    type Output = Pt3<T>;
 
-    fn add(self, p: Pt3) -> Pt3 {
+    fn add(self, p: Pt3<T>) -> Self::Output {
         Pt3 {
             x: self.x + p.x,
             y: self.y + p.y,
@@ -88,10 +118,10 @@ impl Add<Pt3> for Vec3{
     }
 }
 
-impl Sub<Pt3> for Pt3 {
-    type Output = Vec3;
+impl<T: Scalar> Sub<Pt3<T>> for Pt3<T> {
+    type Output = Vec3<T>;
 
-    fn sub(self, rhs: Pt3) -> Vec3 {
+    fn sub(self, rhs: Pt3<T>) -> Self::Output {
         Vec3 {
             x: self.x - rhs.x,
             y: self.y - rhs.y,
@@ -100,11 +130,11 @@ impl Sub<Pt3> for Pt3 {
     }
 }
 
-impl Sub<Vec3> for Pt3 {
-    type Output = Pt3;
+impl<T: Scalar> Sub<Vec3<T>> for Pt3<T> {
+    type Output = Self;
 
-    fn sub(self, rhs: Vec3) -> Pt3 {
-        Pt3 {
+    fn sub(self, rhs: Vec3<T>) -> Self::Output {
+        Self {
             x: self.x - rhs.x,
             y: self.y - rhs.y,
             z: self.z - rhs.z,
@@ -112,155 +142,273 @@ impl Sub<Vec3> for Pt3 {
     }
 }
 
+impl<T: Scalar> Display for Pt3<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "({}, {}, {})", self.x, self.y, self.z)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{scalar::TestScalar, scalar_test};
 
-    const A: Pt3 = Pt3 {x: 1.0, y: 2.0, z: 3.0};
-    const B: Pt3 = Pt3 {x: 4.0, y: 5.0, z: 6.0};
 
-    const O: Pt3 = Pt3 { x: 0.0, y: 0.0, z: 0.0 }; 
-    const POS_X: Pt3 = Pt3 { x: 10.0, y: 0.0, z: 0.0};
-    const POS_Y: Pt3 = Pt3 { x: 0.0, y: 10.0, z: 0.0};
-    const POS_Z: Pt3 = Pt3 { x: 0.0, y: 0.0, z: 10.0};
 
-    const NEG_X: Pt3 = Pt3 { x: -10.0, y: 0.0, z: 0.0};
-    const NEG_Y: Pt3 = Pt3 { x: 0.0, y: -10.0, z: 0.0};
-    const NEG_Z: Pt3 = Pt3 { x: 0.0, y: 0.0, z: -10.0};
+    scalar_test!(test_new, |T| {
 
-    const POS_COMP: Pt3 = Pt3 {x: 10.0, y: 10.0, z: 10.0};
-    const NEG_COMP: Pt3 = Pt3 {x: -10.0, y: -10.0, z: -10.0};
+        let p = Pt3::<T>::new(1.0, 2.0, 3.0);
 
-    #[test]
-    fn get_elements() {
-        assert_eq!(A.x, 1.0);
-        assert_eq!(A.y, 2.0);
-        assert_eq!(A.z, 3.0);
+        assert_eq!(p.x, T::from_f64(1.0));
+        assert_eq!(p.y, T::from_f64(2.0));
+        assert_eq!(p.z, T::from_f64(3.0));
+    });
+
+    scalar_test!(test_zero, |T| {
+
+        let p = Pt3::<T>::ZERO;
+
+        assert_eq!(p.x, T::ZERO);
+        assert_eq!(p.y, T::ZERO);
+        assert_eq!(p.z, T::ZERO);
+    });
+
+    scalar_test!(test_max, |T| {
+
+        let p = Pt3::<T>::MAX;
+
+        assert_eq!(p.x, T::MAX);
+        assert_eq!(p.y, T::MAX);
+        assert_eq!(p.z, T::MAX);
+    });
+
+    scalar_test!(test_min, |T| {
+
+        let p = Pt3::<T>::MIN;
+
+        assert_eq!(p.x, T::MIN);
+        assert_eq!(p.y, T::MIN);
+        assert_eq!(p.z, T::MIN);
+    });
+
+    // Postive translation
+    fn test_translate_add<T>(p: Pt3<T>, v: Vec3<T>) 
+    where 
+        T: TestScalar
+    {
+        let trans_fn = p.translate(v);
+        let trans_vec_rhs_op = p + v;
+        let trans_vec_lhs_op = v + p;
+
+        let expected = Pt3 {
+            x: p.x + v.x,
+            y: p.y + v.y,
+            z: p.z + v.z,
+        };
+
+        assert_eq!(trans_fn, expected);
+        assert_eq!(trans_vec_rhs_op, expected);
+        assert_eq!(trans_vec_lhs_op, expected);
+        assert_eq!(trans_fn, trans_vec_rhs_op);
+        assert_eq!(trans_fn, trans_vec_lhs_op);
     }
 
-    #[test]
-    fn origin() {
-        let p = Pt3::zero();
+    scalar_test!(test_translate_add_scalar, |T| {
+        let p = Pt3::<T>::new(1.0, 2.0, 3.0);
+        let v = Vec3::<T>::new(10.0, 10.0, 10.0);
+        
+        test_translate_add(p, v);
 
-        assert_eq!(p.x, 0.0);
-        assert_eq!(p.y, 0.0);
-        assert_eq!(p.z, 0.0);
+        // TODO: Add some more tests 
+    });
+
+    fn test_translate_sub<T>(p: Pt3<T>, v: Vec3<T>) 
+    where 
+        T: TestScalar
+    {
+        let trans_fn = p.translate(-v);
+        let trans_vec_rhs_op = p - v;
+
+        let expected = Pt3 {
+            x: p.x - v.x,
+            y: p.y - v.y,
+            z: p.z - v.z,
+        };
+
+        assert_eq!(trans_fn, expected);
+        assert_eq!(trans_vec_rhs_op, expected);
+        assert_eq!(trans_fn, trans_vec_rhs_op);
     }
 
-    #[test]
-    fn max() {
-        let p = Pt3::max();
-        assert_eq!(p.x, f32::MAX);
-        assert_eq!(p.y, f32::MAX);
-        assert_eq!(p.z, f32::MAX);
-    }  
+    // Negative translation
+    
+    scalar_test!(test_translate_sub_scalar, |T| {
+        let p = Pt3::<T>::new(1.0, 2.0, 3.0);
+        let v = Vec3::<T>::new(10.0, 10.0, 10.0);
 
-    #[test]
-    fn min() {
-        let p = Pt3::min();
-        assert_eq!(p.x, f32::MIN);
-        assert_eq!(p.y, f32::MIN);
-        assert_eq!(p.z, f32::MIN);
-    }  
+        test_translate_sub(p, v); 
 
-    #[test]
-    fn translate() {
-        let v = Vec3::new(10.0, 10.0, 10.0);
-        let trans = A.translate(v);
-        assert_eq!(trans.x, 11.0);
-        assert_eq!(trans.y, 12.0);
-        assert_eq!(trans.z, 13.0);       
-    }  
+        // TODO: add some more tests
+    });
+    
+    fn test_displacement<T>(a: Pt3<T>, b: Pt3<T>) 
+    where 
+        T: TestScalar
+    {
+        let disp_fn = a.displacement_to(b);
+        let disp_op = a - b;
 
-    #[test]
-    fn vec_add_rhs_op() {
-        let v = Vec3::new(10.0, 10.0, 10.0);
-        let trans = A + v;
-        assert_eq!(trans.x, 11.0);
-        assert_eq!(trans.y, 12.0);
-        assert_eq!(trans.z, 13.0);       
-    }  
+        let expected = Vec3 {
+            x: a.x - b.x,
+            y: a.y - b.y,
+            z: a.z - b.z,
+        };
 
-    #[test]
-    fn vec_add_lhs_op() {
-        let v = Vec3::new(10.0, 10.0, 10.0);
-        let trans = v + A;
-        assert_eq!(trans.x, 11.0);
-        assert_eq!(trans.y, 12.0);
-        assert_eq!(trans.z, 13.0);       
-    }  
-
-    #[test]
-    fn vec_sub_op() {
-        let v = Vec3::new(10.0, 10.0, 10.0);
-        let trans = A - v;
-        assert_eq!(trans.x, -9.0);
-        assert_eq!(trans.y, -8.0);
-        assert_eq!(trans.z, -7.0);       
+        assert_eq!(disp_fn, expected);
+        assert_eq!(disp_op, expected);
+        assert_eq!(disp_fn, disp_op);
     }
 
-    #[test]
-    fn displacement() {
-        let disp = A - B;
-        assert_eq!(disp.x, -3.0);
-        assert_eq!(disp.y, -3.0);
-        assert_eq!(disp.z, -3.0);       
+    scalar_test!(test_displacement, |T| {
+        let a = Pt3::<T>::new(1.0, 2.0, 3.0);
+        let b = Pt3::<T>::new(4.0, 5.0, 6.0);
+
+        test_displacement(a, b);
+
+        // TODO: add some more tests
+    });
+
+    fn test_distance_sq_to<T>(a: Pt3<T>, b: Pt3<T>) 
+    where   
+        T: TestScalar
+    {
+        let expected = 
+            (b.x - a.x) * (b.x - a.x)
+            + (b.y - a.y) * (b.y - a.y)
+            + (b.z - a.z) * (b.z - a.z);
+
+        assert!(a.distance_sq_to(b) - expected < T::TEST_EPS);
     }
 
-    #[test]
-    fn distance_to() {
-        assert!(O.distance_to(POS_X) - 10.0 < 1e-6);
-        assert!(O.distance_to(POS_Y) - 10.0 < 1e-6);
-        assert!(O.distance_to(POS_Z) - 10.0 < 1e-6);
+    scalar_test!(test_distance_sq_to_scalar, |T| {
+        let origin = Pt3::<T>::ZERO;
+        let pos_x = Pt3::<T>::new(10.0, 0.0, 0.0); 
+        test_distance_sq_to(origin, pos_x);
 
-        assert!(O.distance_to(NEG_X) - 10.0 < 1e-6);
-        assert!(O.distance_to(NEG_Y) - 10.0 < 1e-6);
-        assert!(O.distance_to(NEG_Z) - 10.0 < 1e-6);
+        // TODO: add some more tests
+    });
 
-        assert!((O.distance_to(POS_COMP) - 17.320509) < 1e-6);
-        assert!((O.distance_to(NEG_COMP) - 17.320509) < 1e-6);
+    fn test_distance_to<T>(a: Pt3<T>, b: Pt3<T>) 
+    where   
+        T: TestScalar
+    {
+        let expected = 
+            (b.x - a.x) * (b.x - a.x)
+            + (b.y - a.y) * (b.y - a.y)
+            + (b.z - a.z) * (b.z - a.z);
+
+        assert!(a.distance_to(b) - expected.sqrt() < T::TEST_EPS);
     }
 
-    #[test]
-    fn distance_sq_to() {
-        assert!(O.distance_sq_to(POS_X) - 100.0 < 1e-6);
-        assert!(O.distance_sq_to(POS_Y) - 100.0 < 1e-6);
-        assert!(O.distance_sq_to(POS_Z) - 100.0 < 1e-6);
+    scalar_test!(test_distance_to_scalar, |T| {
+        let origin = Pt3::<T>::ZERO;
+        let pos_x = Pt3::<T>::new(10.0, 0.0, 0.0); 
+        test_distance_to(origin, pos_x);
 
-        assert!(O.distance_sq_to(NEG_X) - 100.0 < 1e-6);
-        assert!(O.distance_sq_to(NEG_Y) - 100.0 < 1e-6);
-        assert!(O.distance_sq_to(NEG_Z) - 100.0 < 1e-6);
+        // TODO: add some more tests
+    });
 
-        assert!((O.distance_sq_to(POS_COMP) - 300.0) < 1e-6);
-        assert!((O.distance_sq_to(NEG_COMP) - 300.0) < 1e-6);
+    fn test_midpoint_to<T>(a: Pt3<T>, b: Pt3<T>) 
+    where   
+        T: TestScalar
+    {
+        let expected = Pt3 {
+            x: (b.x - a.x) * T::HALF,
+            y: (b.y - a.y) * T::HALF,
+            z: (b.z - a.z) * T::HALF,
+        };
+
+        assert_eq!(a.midpoint_to(b), expected);
     }
 
-    #[test]
-    fn midpoint() {
-        assert_eq!(O.midpoint(POS_X), Pt3::new(5.0, 0.0, 0.0));
-        assert_eq!(O.midpoint(POS_Y), Pt3::new(0.0, 5.0, 0.0));
-        assert_eq!(O.midpoint(POS_Z), Pt3::new(0.0, 0.0, 5.0));
+    scalar_test!(test_midpoint_scalar, |T| {
+        let origin = Pt3::<T>::ZERO;
+        let pos_x = Pt3::<T>::new(10.0, 0.0, 0.0); 
+        test_midpoint_to(origin, pos_x);
 
-        assert_eq!(O.midpoint(NEG_X), Pt3::new(-5.0, 0.0, 0.0));
-        assert_eq!(O.midpoint(NEG_Y), Pt3::new(0.0, -5.0, 0.0));
-        assert_eq!(O.midpoint(NEG_Z), Pt3::new(0.0, 0.0, -5.0));
+        // TODO: add some more tests
+    });
 
-        assert_eq!(O.midpoint(POS_COMP), Pt3::new(5.0, 5.0, 5.0));
-        assert_eq!(O.midpoint(NEG_COMP), Pt3::new(-5.0, -5.0, -5.0));
+    fn test_lerp_to<T>(a: Pt3<T>, b: Pt3<T>, t: T) 
+    where   
+        T: TestScalar
+    {
+        let expected = Pt3 {
+            x: (b.x - a.x) * t,
+            y: (b.y - a.y) * t,
+            z: (b.z - a.z) * t,
+        };
+
+        assert_eq!(a.lerp_to(b, t), expected);
     }
 
-    #[test]
-    fn lerp() {
-        let v = 0.1;
-        assert_eq!(O.lerp(POS_X, v), Pt3::new(1.0, 0.0, 0.0));
-        assert_eq!(O.lerp(POS_Y, v), Pt3::new(0.0, 1.0, 0.0));
-        assert_eq!(O.lerp(POS_Z, v), Pt3::new(0.0, 0.0, 1.0));
+    scalar_test!(test_lerp_to_scalar, |T| {
+        let origin = Pt3::<T>::ZERO;
+        let pos_x = Pt3::<T>::new(10.0, 0.0, 0.0); 
+        let t = T::from_f64(0.1);
+        test_lerp_to(origin, pos_x, t);
 
-        assert_eq!(O.lerp(NEG_X, v), Pt3::new(-1.0, 0.0, 0.0));
-        assert_eq!(O.lerp(NEG_Y, v), Pt3::new(0.0, -1.0, 0.0));
-        assert_eq!(O.lerp(NEG_Z, v), Pt3::new(0.0, 0.0, -1.0));
+        // TODO: add some more tests
+    });
 
-        assert_eq!(O.lerp(POS_COMP, v), Pt3::new(1.0, 1.0, 1.0));
-        assert_eq!(O.lerp(NEG_COMP, v), Pt3::new(-1.0, -1.0, -1.0));
-    }
+    scalar_test!(test_orient_point_onto_frame, |T| {
+        let source = Frm3::<T>::identity();
+        let destination = Frm3::<T>::from_xy(
+            Pt3::<T>::ZERO,
+            Vec3::<T>::UNIT_X * T::NEG_ONE, 
+            Vec3::<T>::UNIT_Y * T::NEG_ONE, 
+        );
+
+        let p = Pt3::<T>::new(1.0, 1.0, 1.0);
+        let expected = Pt3::<T>::new(-1.0, -1.0, 1.0);
+
+        assert_eq!(p.orient_onto_frame(source, destination), expected);
+    });
+
+    scalar_test!(test_rotate_point_basic, |T| {
+        let p = Pt3::<T>::new(1.0, 0.0, 0.0);
+
+        let axis = Axis3::new(
+            Pt3::<T>::ZERO,
+            Vec3::<T>::UNIT_Z
+        );
+
+        let angle_radians = T::PI;
+
+        let rotated = p.rotate_about_axis(axis, angle_radians);
+        let expected = Pt3::new(-1.0, 0.0, 0.0); 
+
+        rotated.assert_near(expected, T::TEST_ROTATION_EPS);
+    });
+
+    scalar_test!(test_rotate_point_xz, |T| {
+        let p = Pt3::<T>::new(10.0, 0.0, 10.0);
+
+        let axis = Axis3::new(
+            Pt3::<T>::ZERO,
+            Vec3::<T>::UNIT_Z
+        );
+
+        let angle_radians = T::PI;
+
+        let rotated = p.rotate_about_axis(axis, angle_radians);
+        let expected = Pt3::new(-10.0, 0.0, 10.0); 
+
+        rotated.assert_near(expected, T::TEST_ROTATION_EPS);
+    });
+
+    scalar_test!(test_print, |T| {
+        let p = Pt3::<T>::new(1.0, 2.0, 3.0);
+        println!("{p}");
+    });
 }
