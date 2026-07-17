@@ -81,17 +81,17 @@ impl<T: Scalar> Vec3<T> {
         }
     }
 
-    pub fn len_sq(&self) -> T {
+    pub fn length_squared(&self) -> T {
         self.dot(*self)
          
     }
 
-    pub fn len(self) -> T {
-        self.len_sq().sqrt() 
+    pub fn length(self) -> T {
+        self.length_squared().sqrt() 
     }
 
     pub fn normalize(self) -> Self {
-        let len = self.len();
+        let len = self.length();
 
         assert!(len > T::from_f64(LENGTH_NEAR_ZERO_EPS),
             "cannot normalize near-zero-length Vec3!");
@@ -104,7 +104,7 @@ impl<T: Scalar> Vec3<T> {
     }
 
     pub fn is_unit(self) -> bool {
-        let len_sq = self.len_sq();
+        let len_sq = self.length_squared();
         (len_sq - T::ONE).abs() < T::from_f64(UNIT_LENGTH_EPS)
     }
 
@@ -113,7 +113,7 @@ impl<T: Scalar> Vec3<T> {
     }
 
     pub fn is_near_zero(self) -> bool {
-        self.len_sq() < T::from_f64(LENGTH_NEAR_ZERO_EPS * LENGTH_NEAR_ZERO_EPS)
+        self.length_squared() < T::from_f64(LENGTH_NEAR_ZERO_EPS * LENGTH_NEAR_ZERO_EPS)
     }
 
     pub fn angle_to(self, other: Self) -> T{
@@ -128,7 +128,7 @@ impl<T: Scalar> Vec3<T> {
             "vector 'other' is near-zero, cannot compute angle!"
         );
 
-        let cross_len = self.cross(other).len();
+        let cross_len = self.cross(other).length();
         let dot = self.dot(other);
         cross_len.atan2(dot)
     }
@@ -140,7 +140,7 @@ impl<T: Scalar> Vec3<T> {
             return false;
         }
 
-        let len = self.len() * other.len();
+        let len = self.length() * other.length();
         let cos = self.dot(other) / len;
         cos.abs() < Scalar::from_f64(ORTHOGONAL_EPS)
     }
@@ -152,22 +152,16 @@ impl<T: Scalar> Vec3<T> {
             return false;
         }
 
-        let len_prod = (self.len() * other.len()).sqrt();
-        let cross_len = self.cross(other).len();
+        let len_prod = self.length() * other.length();
+        let cross_len = self.cross(other).length();
 
         let sin_angle = cross_len / len_prod;
         let tolerance  = T::from_f64(ANGLE_TOLERANCE_RADIANS).sin();
         return sin_angle <= tolerance
     }
 
-
     /// Primarily to be used if a single vector is rotated.
     pub fn rotate_axis_angle(self, axis: Self, angle_radians: T) -> Self {
-        assert!(
-            !self.is_near_zero(),
-            "cannot rotate a near-zero-length Vec3!"
-        );
-
         let axis_norm = axis.normalize();
         let q = Quat::from_axis_angle(axis_norm, angle_radians);
         self.rotate(q)
@@ -175,6 +169,9 @@ impl<T: Scalar> Vec3<T> {
 
     /// Primarily used when multiple Vec3s need to rotated, as a the Quaternion is not built internally.
     pub fn rotate(self, quat: Quat<T>) -> Self {
+        assert!(quat.is_unit(), 
+        "quat must be unit!");
+
         let vector_quat = Quat::new(T::ZERO, self.x, self.y, self.z);
         let applied = quat * vector_quat * quat.conjugate();
 
@@ -287,7 +284,6 @@ impl<T: Scalar> Display for Vec3<T> {
     }
 }
 
-// TODO: move into a 'test' crate. 
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -356,9 +352,7 @@ mod tests {
         assert_eq!(v.z, T::MIN);
     });
 
-    fn test_vec_add<T>(a: Vec3<T>, b: Vec3<T>) 
-    where 
-        T: TestScalar
+    fn test_vec_add<T: TestScalar>(a: Vec3<T>, b: Vec3<T>) 
     {
         let expected = Vec3 {
             x: a.x + b.x,
@@ -382,9 +376,7 @@ mod tests {
         test_vec_add(a, b);
     });
 
-    fn test_vec_sub<T>(lhs: Vec3<T>, rhs: Vec3<T>) 
-    where 
-        T: TestScalar
+    fn test_vec_sub<T: TestScalar>(lhs: Vec3<T>, rhs: Vec3<T>) 
     {
         let diff_fn = lhs.vec_sub(rhs);
         let diff_op = lhs - rhs;
@@ -436,9 +428,7 @@ mod tests {
         test_scalar_mul(s, v);
     });
 
-    fn test_scalar_div<T>(v: Vec3<T>, s: T) 
-    where 
-        T: TestScalar 
+    fn test_scalar_div<T: TestScalar>(v: Vec3<T>, s: T) 
     {
         let quot_fn = v.scalar_div(s);
         let quot_op = v / s;
@@ -455,7 +445,7 @@ mod tests {
     }
 
     scalar_test!(test_scalar_vec_div_scalar, |T| {
-        let s = 10.0 ;
+        let s = 10.0;
         let v = Vec3::<T>::new(1.0, 2.0, 3.0);
         test_scalar_div(v, s);
     });
@@ -485,7 +475,7 @@ mod tests {
         let a = Vec3::<T>::new(1.0, 2.0, 3.0);
         let b = Vec3::<T>::new(4.0, 5.0, 6.0);
         let dot = a.dot(b);
-        assert!(dot - T::from_f32(32.0) < T::TEST_EPS);
+        assert!(dot - T::from_f64(32.0) < T::TEST_EPS);
     });
 
     scalar_test!(test_dot_perpendicular, |T| {
@@ -520,6 +510,7 @@ mod tests {
         let d1 = c.dot(a);
         let d2 = c.dot(b);
         let eps = T::TEST_EPS;
+
         assert!(d1.abs() < eps);
         assert!(d2.abs() < eps);
     });
@@ -528,6 +519,7 @@ mod tests {
         let v = Vec3::<T>::new(1.0, 2.0, 3.0);
         let cross = v.cross(v);
         let eps = T::TEST_EPS;
+
         assert!((cross.x).abs() < eps);
         assert!((cross.y).abs() < eps);
         assert!((cross.z).abs() < eps);
@@ -539,6 +531,7 @@ mod tests {
         let ab = a.cross(b);
         let ba = b.cross(a);
         let eps = T::TEST_EPS;
+
         assert!((ab.x + ba.x).abs() < eps);
         assert!((ab.y + ba.y).abs() < eps);
         assert!((ab.z + ba.z).abs() < eps);
@@ -546,28 +539,30 @@ mod tests {
 
     scalar_test!(test_len_sq_3_4_5, |T| {
         let v = Vec3::<T>::new(3.0, 4.0, 0.0);
-        assert!(v.len_sq() - T::from_f64(25.0) < T::TEST_EPS);
+
+        assert!((v.length_squared() - T::from_f64(25.0)).abs() < T::TEST_EPS);
     });
 
     scalar_test!(test_len_3_4_5, |T| {
         let v = Vec3::<T>::new(3.0, 4.0, 0.0);
-        assert!(v.len() - T::from_f64(5.0) < T::TEST_EPS);
+
+        assert!((v.length() - T::from_f64(5.0)).abs() < T::TEST_EPS);
     });
 
     scalar_test!(test_len_zero, |T| {
         let v = Vec3::<T>::ZERO;
-        assert_eq!(v.len(), T::ZERO);
+
+        assert_eq!(v.length(), T::ZERO);
     });
 
     scalar_test!(test_normalize_basic, |T| {
         let v = Vec3::<T>::new(3.0, 4.0, 0.0);
 
         let n = v.normalize();
-        let expected = v / v.len();
+        let expected = v / v.length();
 
         let eps = T::TEST_EPS;
-        assert!((n.len() - T::ONE).abs() < eps);
-
+        assert!((n.length() - T::ONE).abs() < eps);
         
         n.assert_near(expected, T::TEST_EPS);
     });
@@ -611,17 +606,20 @@ mod tests {
 
     scalar_test!(test_is_exactly_zero, |T| {
         let v = Vec3::<T>::ZERO;
+
         assert!(v.is_exactly_zero());
     });
 
     scalar_test!(test_is_not_exactly_zero, |T| {
         let v = Vec3::<T>::new(1e-9, 0.0, 0.0);
+
         assert!(!v.is_exactly_zero());
     });
 
     scalar_test!(test_is_near_zero, |T| {
         let v1 = Vec3::new(9e-9, 0.0, 0.0);
         let v2 = Vec3::new(-9e-9, 0.0, 0.0);
+
         assert!(v1.is_near_zero());
         assert!(v2.is_near_zero());
     });
@@ -630,6 +628,7 @@ mod tests {
         let v1 = Vec3::<T>::new(1e-7, 0.0, 0.0);
         let v2 = Vec3::<T>::new(-1e-7, 0.0, 0.0);
         let z = Vec3::<T>::UNIT_Z;
+
         assert!(!v1.is_near_zero());
         assert!(!v2.is_near_zero());
         assert!(!z.is_near_zero());
@@ -638,6 +637,7 @@ mod tests {
     scalar_test!(test_angle_to_same_direction, |T| {
         let a = Vec3::<T>::new(1.0, 2.0, 3.0);
         let b = Vec3::<T>::new(2.0, 4.0, 6.0);
+
         assert!(a.angle_to(b).abs() < T::TEST_EPS);
         assert!(b.angle_to(a).abs() < T::TEST_EPS);
     });
@@ -645,22 +645,25 @@ mod tests {
     scalar_test!(test_angle_to_opposite_direction, |T| {
         let a = Vec3::<T>::new(1.0, 2.0, 3.0);
         let b = Vec3::<T>::new(-2.0, -4.0, -6.0);
-        assert!((a.angle_to(b).abs() - T::PI).abs() < T::TEST_EPS);
-        assert!((b.angle_to(a).abs() - T::PI).abs() < T::TEST_EPS);
+
+        assert!((a.angle_to(b) - T::PI).abs() < T::TEST_EPS);
+        assert!((b.angle_to(a) - T::PI).abs() < T::TEST_EPS);
     });
 
     scalar_test!(test_angle_to_compound_perpendicular, |T| {
         let a = Vec3::<T>::new(1.0, 2.0, 3.0);
         let b = Vec3::<T>::new(4.0, -5.0, 2.0);
-        assert!((a.angle_to(b).abs() - T::PI_OVER_2).abs() < T::TEST_EPS);
-        assert!((b.angle_to(a).abs() - T::PI_OVER_2).abs() < T::TEST_EPS);
+
+        assert!((a.angle_to(b) - T::PI_OVER_2).abs() < T::TEST_EPS);
+        assert!((b.angle_to(a) - T::PI_OVER_2).abs() < T::TEST_EPS);
     });
 
     scalar_test!(test_angle_to_45, |T| {
         let a = Vec3::<T>::new(1.0, 0.0, 0.0);
         let b = Vec3::<T>::new(1.0, 1.0, 0.0);
-        assert!((a.angle_to(b).abs() - T::PI_OVER_4).abs() < T::TEST_EPS);
-        assert!((b.angle_to(a).abs() - T::PI_OVER_4).abs() < T::TEST_EPS);
+
+        assert!((a.angle_to(b) - T::PI_OVER_4).abs() < T::TEST_EPS);
+        assert!((b.angle_to(a) - T::PI_OVER_4).abs() < T::TEST_EPS);
     });
 
     scalar_test!(
@@ -708,6 +711,7 @@ mod tests {
     scalar_test!(test_is_not_perpendicular_to_self, |T| {
         let a = Vec3::<T>::new(1.0, 0.0, 0.0);
         let b = Vec3::<T>::new(1.0, 0.0, 0.0);
+
         assert!(!a.is_perpendicular_to(b));
         assert!(!b.is_perpendicular_to(a));
     });
@@ -715,6 +719,7 @@ mod tests {
     scalar_test!(test_near_0_is_not_perpendicular, |T| {
         let a = Vec3::<T>::new(1e-9, 0.0, 0.0);
         let b = Vec3::<T>::new(0.0, 1.0, 0.0);
+
         assert!(!a.is_perpendicular_to(b));
         assert!(!b.is_perpendicular_to(a));
     });
@@ -722,6 +727,7 @@ mod tests {
     scalar_test!(test_is_perpendicular_to_not_unit, |T| {
         let a = Vec3::<T>::new(10.0, 0.0, 0.0);
         let b = Vec3::<T>::new(0.0, 10.0, 0.0);
+
         assert!(a.is_perpendicular_to(b));
         assert!(b.is_perpendicular_to(a));
     });
@@ -741,12 +747,14 @@ mod tests {
     scalar_test!(test_is_not_perpendicular_to_compound, |T| {
         let a = Vec3::<T>::new(1.0, 2.0, 3.0);
         let b = Vec3::<T>::new(4.0, 5.0, 6.0);
+
         assert!(!a.is_perpendicular_to(b));
         assert!(!b.is_perpendicular_to(a));
     });
 
     scalar_test!(test_is_parallel_to_self, |T| {
         let a = Vec3::<T>::new(1.0, 2.0, 3.0);
+
         assert!(a.is_parallel_to(a));
     });
 
@@ -764,6 +772,16 @@ mod tests {
 
         assert!(a.is_parallel_to(b));
         assert!(b.is_parallel_to(a));
+    });
+
+    scalar_test!(test_is_parallel_to_scale_invariant, |T| {
+        let a = Vec3::<T>::new(10.0, 20.0, 30.0);
+        let b = Vec3::<T>::new(20.0, 40.0, 60.0);
+        let c = Vec3::<T>::new(0.1, 0.2, 0.3);
+
+        assert!(a.is_parallel_to(b));
+        assert!(a.is_parallel_to(c));
+        assert!(b.is_parallel_to(-c));
     });
 
     scalar_test!(test_is_not_parallel_to_perpendicular, |T| {
@@ -802,16 +820,22 @@ mod tests {
     });
 
     scalar_test!(
-        #[should_panic(expected = "cannot rotate a near-zero-length Vec3!")]
-        test_rotate_vec_near_zero_x, 
+        test_rotate_zero_vec, 
         |T| {
-        let x = Vec3::<T>::ZERO;
-        let axis = Vec3::<T>::UNIT_Z;
-        let angle_radians = T::PI;
-        let _ = x.rotate_axis_angle(axis, angle_radians);
+        let result = Vec3::<T>::ZERO.rotate_axis_angle(Vec3::UNIT_Z, T::PI);
+
+        assert_eq!(result, Vec3::<T>::ZERO)
     });
 
+    scalar_test!(
+        #[should_panic(expected = "quat must be unit!")]
+        test_rotation_rejects_non_unit_quat, 
+        |T| {
+        let v = Vec3::<T>::UNIT_X;
+        let q = Quat::<T>::new(2.0, 0.0, 0.0, 0.0);
 
+        let _ = v.rotate(q);
+    });
 
     scalar_test!(test_print, |T| {
         let v = Vec3::<T>::new(1.0, 2.0, 3.0);

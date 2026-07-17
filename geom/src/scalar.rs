@@ -53,7 +53,6 @@ impl Scalar for f32 {
     const MIN: Self = f32::MIN;
     const MAX: Self = f32::MAX;
 
-
     fn sqrt(self) -> Self {
         self.sqrt()
     }
@@ -181,4 +180,47 @@ macro_rules! scalar_test {
             }
         }
     }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn test_scalar_generic_add<T: Scalar>(a: T, b: T) -> T {
+        a + b
+    }
+
+    fn test_scalar_generic_sub<T: Scalar>(lhs: T, rhs: T) -> T {
+        lhs - rhs
+    }
+
+    fn test_scalar_generic_mul<T: Scalar>(a: T, b: T) -> T {
+        a * b
+    }
+
+    fn test_scalar_generic_div<T: Scalar>(lhs: T, rhs: T) -> T {
+        lhs / rhs
+    }
+
+    #[test]
+    fn test_scalar_ops() {
+        // Add
+        assert_eq!(test_scalar_generic_add::<f32>(1.0, 2.0), 3.0);
+        assert_eq!(test_scalar_generic_add::<f64>(1.0, 2.0), 3.0);
+
+        // Sub
+        assert_eq!(test_scalar_generic_sub::<f32>(1.0, 2.0), -1.0);
+        assert_eq!(test_scalar_generic_sub::<f64>(1.0, 2.0), -1.0);
+
+        // Mul
+        assert_eq!(test_scalar_generic_mul::<f32>(1.0, 2.0), 2.0);
+        assert_eq!(test_scalar_generic_mul::<f64>(1.0, 2.0), 2.0);
+
+        // Div
+        assert_eq!(test_scalar_generic_div::<f32>(1.0, 2.0), Scalar::HALF);
+        assert_eq!(test_scalar_generic_div::<f64>(1.0, 2.0), Scalar::HALF);
+    }
+
+
 }

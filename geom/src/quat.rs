@@ -10,6 +10,7 @@ pub struct Quat<T> {
 }
 
 const LENGTH_NEAR_ZERO_EPS: f64 = 1e-8;
+const UNIT_LENGTH_EPS: f64 = 1e-6;
 
 impl<T: Scalar> Quat<T> {
 
@@ -90,6 +91,11 @@ impl<T: Scalar> Quat<T> {
         }
     }
 
+    pub fn is_unit(self) -> bool {
+        let len_sq = self.len_sq();
+        (len_sq - T::ONE).abs() < T::from_f64(UNIT_LENGTH_EPS)
+    }
+
     fn assert_near(self, b: Quat<T>, eps: T) {
         assert!((self.w - b.w).abs() < eps,
             "left w: {} != right w: {}", self.w, b.w);
@@ -100,8 +106,6 @@ impl<T: Scalar> Quat<T> {
         assert!((self.z - b.z).abs() < eps,
             "left z: {} != right z: {}", self.z, b.z);
     }
-
-
 }
 
 /// Quat * Quat
@@ -155,20 +159,21 @@ mod tests {
 
     scalar_test!(test_identity, |T| {
         let q = Quat::<T>::IDENTITY;
-        assert_eq!(q.w, T::from_f64(1.0));
-        assert_eq!(q.x, T::from_f64(0.0));
-        assert_eq!(q.y, T::from_f64(0.0));
-        assert_eq!(q.z, T::from_f64(0.0));
+        assert_eq!(q.w, T::ONE);
+        assert_eq!(q.x, T::ZERO);
+        assert_eq!(q.y, T::ZERO);
+        assert_eq!(q.z, T::ZERO);
     });
 
     scalar_test!(test_identity_has_unit_length, |T| {
-        assert!(Quat::<T>::IDENTITY.len() - T::ONE < T::TEST_EPS);
+
+        assert!((Quat::<T>::IDENTITY.len() - T::ONE).abs() < T::TEST_EPS);
     });
 
     scalar_test!(test_normalize_produces_unit_quaternion, |T| {
         let normalized = Quat::<T>::new(1.0, 2.0, 3.0, 4.0).normalize();
-        assert!(normalized.len() - T::ONE < T::TEST_EPS)
 
+        assert!((normalized.len() - T::ONE).abs() < T::TEST_EPS)
     });
 
     scalar_test!(
@@ -204,6 +209,20 @@ mod tests {
 
         Quat::IDENTITY.assert_near(result, T::TEST_EPS); 
         result.assert_near(Quat::IDENTITY, T::TEST_EPS); 
+    });
+
+    scalar_test!(test_is_unit, |T| {
+        let identity = Quat::<T>::IDENTITY;
+        let q = Quat::<T>::new(1.0, 2.0, 3.0, 4.0).normalize();
+
+        assert!(identity.is_unit()); 
+        assert!(q.is_unit()); 
+    });
+
+    scalar_test!(test_is_not_unit, |T| {
+        let q = Quat::<T>::new(1.0, 2.0, 3.0, 4.0);
+
+        assert!(!q.is_unit()); 
     });
 
      scalar_test!(test_print, |T| {

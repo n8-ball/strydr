@@ -1,5 +1,5 @@
 use std::{fmt::{Formatter, Display}, fmt, ops::{Add, Sub}};
-use crate::{vec3::Vec3, frm3::Frm3, scalar::Scalar, axis3::Axis3};
+use crate::{vec3::Vec3, frame3::Frame3, scalar::Scalar, axis3::Axis3};
 
 /// A 3d point represented by f32 fields, x, y, and z.
 /// 
@@ -34,18 +34,18 @@ impl<T: Scalar> Pt3<T> {
 
     pub fn displacement_to(self, rhs: Self) -> Vec3<T> {
         Vec3 {
-            x: self.x - rhs.x,
-            y: self.y - rhs.y,
-            z: self.z - rhs.z,
+            x: rhs.x - self.x,
+            y: rhs.y - self.y,
+            z: rhs.z - self.z,
         }
     }
 
     pub fn distance_to(self, other: Self) -> T {
-        (self - other).len()
+        (self - other).length()
     }
 
     pub fn distance_sq_to(self, other: Self) -> T {
-        (self - other).len_sq()
+        (self - other).length_squared()
     }
 
     pub fn midpoint_to(self, other: Self) -> Self {
@@ -57,31 +57,43 @@ impl<T: Scalar> Pt3<T> {
     }
 
     pub fn lerp_to(self, b: Self, t: T) -> Self {
+        assert!(t >= T::ZERO,
+            "t is less than zero!");
+
+        assert!(t <= T::ONE,
+            "t is greater than one!");
+
         Self {
-            x: (b.x - self.x) * t,
-            y: (b.y - self.y) * t,
-            z: (b.z - self.z) * t,
+            x: self.x + (b.x - self.x) * t,
+            y: self.y + (b.y - self.y) * t,
+            z: self.z + (b.z - self.z) * t,
         }
     }
 
-    pub fn orient_onto_frame(self, source: Frm3<T>, destination: Frm3<T>) -> Self {
-        let source_delta = self - source.pos();
+    pub fn transform_between_frames(self, source: Frame3<T>, destination: Frame3<T>) -> Self {
+        let world = source.origin() 
+        + source.lx() * self.x
+        + source.ly() * self.y 
+        + source.lz() * self.z;
+        
+        let delta = world - destination.origin();
+
         Self {
-            x: destination.pos().x + (source_delta.x * destination.lx().x),
-            y: destination.pos().y + (source_delta.y * destination.ly().y),
-            z: destination.pos().z + (source_delta.z * destination.lz().z),
+            x: delta.dot(destination.lx()),
+            y: delta.dot(destination.ly()),
+            z: delta.dot(destination.lz()),
         } 
     }
 
     pub fn rotate_about_axis(self, axis: Axis3<T>, angle_radians: T) -> Self {
-        let from_axis = self - axis.pos; 
+        let from_axis = self - axis.origin();
         if from_axis.is_near_zero() {
             return self;
         }
 
-        let rotated_dir = from_axis.rotate_axis_angle(axis.dir, angle_radians);
+        let rotated_dir = from_axis.rotate_axis_angle(axis.direction(), angle_radians);
 
-        axis.pos + rotated_dir
+        axis.origin() + rotated_dir
     }
 
     pub fn assert_near(self, b: Pt3<T>, eps: T) {
@@ -153,8 +165,6 @@ mod tests {
     use super::*;
     use crate::{scalar::TestScalar, scalar_test};
 
-
-
     scalar_test!(test_new, |T| {
 
         let p = Pt3::<T>::new(1.0, 2.0, 3.0);
@@ -191,10 +201,7 @@ mod tests {
         assert_eq!(p.z, T::MIN);
     });
 
-    // Postive translation
-    fn test_translate_add<T>(p: Pt3<T>, v: Vec3<T>) 
-    where 
-        T: TestScalar
+    fn test_translate_add<T: TestScalar>(p: Pt3<T>, v: Vec3<T>) 
     {
         let trans_fn = p.translate(v);
         let trans_vec_rhs_op = p + v;
@@ -222,9 +229,7 @@ mod tests {
         // TODO: Add some more tests 
     });
 
-    fn test_translate_sub<T>(p: Pt3<T>, v: Vec3<T>) 
-    where 
-        T: TestScalar
+    fn test_translate_sub<T: TestScalar>(p: Pt3<T>, v: Vec3<T>) 
     {
         let trans_fn = p.translate(-v);
         let trans_vec_rhs_op = p - v;
@@ -240,8 +245,6 @@ mod tests {
         assert_eq!(trans_fn, trans_vec_rhs_op);
     }
 
-    // Negative translation
-    
     scalar_test!(test_translate_sub_scalar, |T| {
         let p = Pt3::<T>::new(1.0, 2.0, 3.0);
         let v = Vec3::<T>::new(10.0, 10.0, 10.0);
@@ -251,17 +254,15 @@ mod tests {
         // TODO: add some more tests
     });
     
-    fn test_displacement<T>(a: Pt3<T>, b: Pt3<T>) 
-    where 
-        T: TestScalar
+    fn test_displacement<T: TestScalar>(a: Pt3<T>, b: Pt3<T>) 
     {
         let disp_fn = a.displacement_to(b);
-        let disp_op = a - b;
+        let disp_op = b - a;
 
         let expected = Vec3 {
-            x: a.x - b.x,
-            y: a.y - b.y,
-            z: a.z - b.z,
+            x: b.x - a.x,
+            y: b.y - a.y,
+            z: b.z - a.z,
         };
 
         assert_eq!(disp_fn, expected);
@@ -278,16 +279,14 @@ mod tests {
         // TODO: add some more tests
     });
 
-    fn test_distance_sq_to<T>(a: Pt3<T>, b: Pt3<T>) 
-    where   
-        T: TestScalar
+    fn test_distance_sq_to<T: TestScalar>(a: Pt3<T>, b: Pt3<T>) 
     {
         let expected = 
             (b.x - a.x) * (b.x - a.x)
             + (b.y - a.y) * (b.y - a.y)
             + (b.z - a.z) * (b.z - a.z);
 
-        assert!(a.distance_sq_to(b) - expected < T::TEST_EPS);
+        assert!((a.distance_sq_to(b) - expected).abs() < T::TEST_EPS);
     }
 
     scalar_test!(test_distance_sq_to_scalar, |T| {
@@ -298,16 +297,14 @@ mod tests {
         // TODO: add some more tests
     });
 
-    fn test_distance_to<T>(a: Pt3<T>, b: Pt3<T>) 
-    where   
-        T: TestScalar
+    fn test_distance_to<T: TestScalar>(a: Pt3<T>, b: Pt3<T>) 
     {
         let expected = 
             (b.x - a.x) * (b.x - a.x)
             + (b.y - a.y) * (b.y - a.y)
             + (b.z - a.z) * (b.z - a.z);
 
-        assert!(a.distance_to(b) - expected.sqrt() < T::TEST_EPS);
+        assert!((a.distance_to(b) - expected.sqrt()).abs() < T::TEST_EPS);
     }
 
     scalar_test!(test_distance_to_scalar, |T| {
@@ -318,9 +315,7 @@ mod tests {
         // TODO: add some more tests
     });
 
-    fn test_midpoint_to<T>(a: Pt3<T>, b: Pt3<T>) 
-    where   
-        T: TestScalar
+    fn test_midpoint_to<T: TestScalar>(a: Pt3<T>, b: Pt3<T>) 
     {
         let expected = Pt3 {
             x: (b.x - a.x) * T::HALF,
@@ -328,51 +323,93 @@ mod tests {
             z: (b.z - a.z) * T::HALF,
         };
 
-        assert_eq!(a.midpoint_to(b), expected);
+        a.midpoint_to(b).assert_near(expected, T::TEST_EPS);
     }
 
-    scalar_test!(test_midpoint_scalar, |T| {
+    scalar_test!(test_midpoint_basic, |T| {
         let origin = Pt3::<T>::ZERO;
         let pos_x = Pt3::<T>::new(10.0, 0.0, 0.0); 
         test_midpoint_to(origin, pos_x);
-
-        // TODO: add some more tests
     });
 
-    fn test_lerp_to<T>(a: Pt3<T>, b: Pt3<T>, t: T) 
-    where   
-        T: TestScalar
-    {
-        let expected = Pt3 {
-            x: (b.x - a.x) * t,
-            y: (b.y - a.y) * t,
-            z: (b.z - a.z) * t,
-        };
+    scalar_test!(test_midpoint_is_symmetric_and_halfway, |T| {
+        let a = Pt3::<T>::new(3.0, -2.0, 8.0);
+        let b = Pt3::<T>::new(11.0, 6.0, -4.0);
+        let m = a.midpoint_to(b);
 
-        assert_eq!(a.lerp_to(b, t), expected);
-    }
-
-    scalar_test!(test_lerp_to_scalar, |T| {
-        let origin = Pt3::<T>::ZERO;
-        let pos_x = Pt3::<T>::new(10.0, 0.0, 0.0); 
-        let t = T::from_f64(0.1);
-        test_lerp_to(origin, pos_x, t);
-
-        // TODO: add some more tests
+        m.assert_near(b.midpoint_to(a), T::TEST_EPS);
+        assert!((a.distance_to(m) - m.distance_to(b)).abs() <= T::TEST_EPS);
     });
 
-    scalar_test!(test_orient_point_onto_frame, |T| {
-        let source = Frm3::<T>::identity();
-        let destination = Frm3::<T>::from_xy(
+    scalar_test!(test_lerp_to_non_origin, |T| {
+        let a = Pt3::<T>::new(10.0, 20.0, 30.0);
+        let b = Pt3::<T>::new(20.0, 40.0, 50.0);
+
+        a.lerp_to(b, T::ZERO).assert_near(a, T::TEST_EPS);
+        a.lerp_to(b, T::ONE).assert_near(b, T::TEST_EPS);
+        a.lerp_to(b, T::HALF)
+        .assert_near(Pt3::<T>::new(15.0, 30.0, 40.0), T::TEST_EPS);
+    });
+
+    scalar_test!(
+        #[should_panic(expected = "t is less than zero!")]
+        test_lerp_to_negative_t, 
+        |T| {
+
+        Pt3::<T>::ZERO.lerp_to(Pt3::<T>::new(10.0, 0.0, 0.0), -1.0);
+    });
+
+    scalar_test!(
+        #[should_panic(expected = "t is greater than one!")]
+        test_lerp_to_t_greater_than_one, 
+        |T| {
+        Pt3::<T>::ZERO.lerp_to(Pt3::<T>::new(10.0, 0.0, 0.0), 2.0);
+    });
+
+    scalar_test!(test_transform_between_frames_basic, |T| {
+        let source = Frame3::<T>::IDENTITY;
+        let destination = Frame3::<T>::from_xy(
             Pt3::<T>::ZERO,
-            Vec3::<T>::UNIT_X * T::NEG_ONE, 
-            Vec3::<T>::UNIT_Y * T::NEG_ONE, 
+            -Vec3::<T>::UNIT_X,
+            -Vec3::<T>::UNIT_Y,
         );
 
         let p = Pt3::<T>::new(1.0, 1.0, 1.0);
         let expected = Pt3::<T>::new(-1.0, -1.0, 1.0);
 
-        assert_eq!(p.orient_onto_frame(source, destination), expected);
+        p.transform_between_frames(source, destination)
+            .assert_near(expected, T::TEST_EPS);
+    });
+
+    scalar_test!(test_transform_between_rotated_frames, |T| {
+        let source = Frame3::<T>::IDENTITY;
+        let destination = Frame3::<T>::from_xy(
+            Pt3::<T>::new(10.0, 0.0, 0.0),
+            Vec3::<T>::UNIT_Y,
+            -Vec3::<T>::UNIT_X,
+        );
+
+        let p = Pt3::<T>::new(2.0, 3.0, 4.0);
+        let expected = Pt3::<T>::new(3.0, 8.0, 4.0);
+
+        p.transform_between_frames(source, destination)
+            .assert_near(expected, T::TEST_EPS);
+    });
+
+    scalar_test!(test_frame_round_trip_world_local_world, |T| {
+        let world = Frame3::IDENTITY;
+        let frame = Frame3::from_xy(
+            Pt3::<T>::new(10.0, -4.0, 2.0),
+            Vec3::new(1.0, 1.0, 0.0).normalize(),
+            Vec3::new(-1.0, 1.0, 0.0).normalize(),
+        );
+
+        let p = Pt3::new(12.0, 3.0, -8.0);
+
+        let t1 = p.transform_between_frames(world, frame);
+        let t2 = t1.transform_between_frames(frame, world);
+
+        t2.assert_near(p, T::TEST_EPS);
     });
 
     scalar_test!(test_rotate_point_basic, |T| {
