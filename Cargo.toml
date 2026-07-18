@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "geom",
+    "geom", "mesh",
 ]
 
 resolver = "2"

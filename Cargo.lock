@@ -3,5 +3,12 @@
 version = 4
 
 [[package]]
-name = "math"
+name = "geom"
 version = "0.1.0"
+
+[[package]]
+name = "mesh"
+version = "0.1.0"
+dependencies = [
+ "geom",
+]
