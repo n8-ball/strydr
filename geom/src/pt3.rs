@@ -396,20 +396,18 @@ mod tests {
             .assert_near(expected, T::TEST_EPS);
     });
 
-    scalar_test!(test_frame_round_trip_world_local_world, |T| {
-        let world = Frame3::IDENTITY;
-        let frame = Frame3::from_xy(
+    scalar_test!(test_round_trip_source_destination_source, |T| {
+        let source = Frame3::<T>::IDENTITY;
+        let destination = Frame3::<T>::from_xy(
             Pt3::<T>::new(10.0, -4.0, 2.0),
-            Vec3::new(1.0, 1.0, 0.0).normalize(),
-            Vec3::new(-1.0, 1.0, 0.0).normalize(),
+            Vec3::<T>::new(1.0, 1.0, 0.0).normalize(),
+            Vec3::<T>::new(-1.0, 1.0, 0.0).normalize(),
         );
 
-        let p = Pt3::new(12.0, 3.0, -8.0);
-
-        let t1 = p.transform_between_frames(world, frame);
-        let t2 = t1.transform_between_frames(frame, world);
-
-        t2.assert_near(p, T::TEST_EPS);
+        let p = Pt3::<T>::new(12.0, 3.0, -8.0);
+        let t1 = p.transform_between_frames(source, destination);
+        t1.transform_between_frames(destination, source) 
+        .assert_near(p, T::TEST_EPS);
     });
 
     scalar_test!(test_rotate_point_basic, |T| {

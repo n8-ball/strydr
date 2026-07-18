@@ -20,19 +20,19 @@ impl<T: Scalar> Quat<T> {
         Self { w, x, y, z }
     }
 
-    pub fn len_sq(self) -> T {
+    pub fn length_squared(self) -> T {
         self.w * self.w
         + self.x * self.x
         + self.y * self.y
         + self.z * self.z
     }
 
-    pub fn len(self) -> T {
-        self.len_sq().sqrt()
+    pub fn length(self) -> T {
+        self.length_squared().sqrt()
     }
 
     pub fn normalize(self) -> Self {
-        let len = self.len();
+        let len = self.length();
 
         assert!(len > T::from_f64(LENGTH_NEAR_ZERO_EPS), 
             "cannot normalize a zero-length quaternion!"
@@ -56,7 +56,7 @@ impl<T: Scalar> Quat<T> {
     }
 
     pub fn inverse(self) -> Self {
-        let len_sq = self.len_sq();
+        let len_sq = self.length_squared();
 
         assert!(len_sq > T::from_f64(LENGTH_NEAR_ZERO_EPS * LENGTH_NEAR_ZERO_EPS), 
             "cannot invert a zero-length quaternion!"
@@ -75,7 +75,7 @@ impl<T: Scalar> Quat<T> {
     pub fn from_axis_angle(axis_dir: Vec3<T>, angle_radians: T) -> Self {
         assert!(
             !axis_dir.is_near_zero(),
-            "cannot rotate around a near-zero-length axis direction!"
+            "cannot rotate around a zero-length axis direction!"
         );
 
         let axis = axis_dir.normalize();
@@ -92,11 +92,11 @@ impl<T: Scalar> Quat<T> {
     }
 
     pub fn is_unit(self) -> bool {
-        let len_sq = self.len_sq();
+        let len_sq = self.length_squared();
         (len_sq - T::ONE).abs() < T::from_f64(UNIT_LENGTH_EPS)
     }
 
-    fn assert_near(self, b: Quat<T>, eps: T) {
+    pub fn assert_near(self, b: Quat<T>, eps: T) {
         assert!((self.w - b.w).abs() < eps,
             "left w: {} != right w: {}", self.w, b.w);
         assert!((self.x - b.x).abs() < eps,
@@ -145,7 +145,7 @@ impl<T: Scalar> Display for Quat<T> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+use super::*;
     use crate::{scalar_test, scalar::TestScalar};
 
     scalar_test!(test_new, |T| {
@@ -165,15 +165,40 @@ mod tests {
         assert_eq!(q.z, T::ZERO);
     });
 
+    scalar_test!(test_length_squared, |T| {
+        let q = Quat::<T>::new(1.0, 2.0, 3.0, 4.0);
+
+        assert!((q.length_squared() - 30.0).abs() < T::TEST_EPS)
+    });
+
+    scalar_test!(test_identity_length_squared_is_one, |T| {
+        let q = Quat::<T>::IDENTITY;
+
+        assert!((q.length_squared() - T::ONE).abs() < T::TEST_EPS)
+    });
+
     scalar_test!(test_identity_has_unit_length, |T| {
 
-        assert!((Quat::<T>::IDENTITY.len() - T::ONE).abs() < T::TEST_EPS);
+        assert!((Quat::<T>::IDENTITY.length() - T::ONE).abs() < T::TEST_EPS);
     });
 
     scalar_test!(test_normalize_produces_unit_quaternion, |T| {
         let normalized = Quat::<T>::new(1.0, 2.0, 3.0, 4.0).normalize();
 
-        assert!((normalized.len() - T::ONE).abs() < T::TEST_EPS)
+        assert!((normalized.length() - T::ONE).abs() < T::TEST_EPS)
+    });
+
+    scalar_test!(test_normalize_known_quat, |T| {
+        let normalized = Quat::<T>::new(2.0, 0.0, 0.0, 0.0).normalize();
+        let expected = Quat::<T>::IDENTITY;
+        normalized.assert_near(expected, T::TEST_EPS)
+    });
+
+    scalar_test!(test_normalize_idempotent, |T| {
+        let q = Quat::<T>::new(1.0, -2.0, 3.0, -4.0);
+        let once = q.normalize();
+        let twice = once.normalize();
+        once.assert_near(twice, T::TEST_EPS)
     });
 
     scalar_test!(
@@ -196,6 +221,24 @@ mod tests {
         assert_eq!(conjugate, expected);
     });
 
+    scalar_test!(test_conjugate_twice_returns_original, |T| {
+        let q = Quat::<T>::new(-1.0, 2.0, -3.0, 4.0);
+        let once = q.conjugate();
+        let twice = once.conjugate();
+        assert_eq!(twice, q);
+    });
+
+    scalar_test!(test_identity_conjugate_is_identity, |T| {
+        assert_eq!(Quat::<T>::IDENTITY, Quat::<T>::IDENTITY.conjugate());
+    });
+
+    scalar_test!(test_conjudate_times_quat_is_norm_squared, |T| {
+        let q = Quat::<T>::new(1.0, 2.0, 3.0, 4.0);
+        let result = q.conjugate() * q;
+        let expected = Quat::<T>::new(30.0, 0.0, 0.0, 0.0);
+        assert_eq!(result, expected);
+    });
+
     scalar_test!(test_identity_multiplication_does_not_change_quaternion, |T| {
         let q = Quat::<T>::new(1.0, 2.0, 3.0, 4.0);
 
@@ -207,8 +250,133 @@ mod tests {
         let q = Quat::<T>::new(1.0, 2.0, 3.0, 4.0);
         let result = q * q.inverse();
 
-        Quat::IDENTITY.assert_near(result, T::TEST_EPS); 
         result.assert_near(Quat::IDENTITY, T::TEST_EPS); 
+    });
+
+    scalar_test!(test_inverse_times_quaternion_is_identity, |T| {
+        let q = Quat::<T>::new(1.0, 2.0, 3.0, 4.0);
+        let result = q.inverse() * q;
+
+        result.assert_near(Quat::IDENTITY, T::TEST_EPS); 
+    });
+
+    scalar_test!(test_inverse_of_identity_is_identity, |T| {
+        let q = Quat::<T>::IDENTITY;
+        let inverse = q.inverse();
+
+        inverse.assert_near(Quat::IDENTITY, T::TEST_EPS); 
+    });
+
+    scalar_test!(test_inverse_of_inverse_is_original, |T| {
+        let q = Quat::<T>::IDENTITY;
+        let once = q.inverse();
+        let twice = once.inverse();
+
+        twice.assert_near(q, T::TEST_EPS); 
+    });
+
+    scalar_test!(test_unit_quaternion_inverse_equals_conjugate, |T| {
+        let q = Quat::<T>::from_axis_angle(
+            Vec3::<T>::new(1.0, 2.0, 3.0), 
+            1.25);
+
+        q.inverse().assert_near(q.conjugate(), T::TEST_EPS); 
+    });
+
+    scalar_test!(
+        #[should_panic(expected = "cannot invert a zero-length quaternion")]
+        test_inverse_zero_quaternion_panics, 
+        |T| {
+        let _ = Quat::<T>::new(0.0, 0.0, 0.0, 0.0).inverse();
+    });
+
+    scalar_test!(test_i_times_j_equals_k, |T| {
+        let i = Quat::<T>::new(0.0, 1.0, 0.0, 0.0);
+        let j = Quat::<T>::new(0.0, 0.0, 1.0, 0.0);
+        let k = Quat::<T>::new(0.0, 0.0, 0.0, 1.0);
+        assert_eq!(i * j, k);
+    });
+
+    scalar_test!(test_j_times_k_equals_i, |T| {
+        let i = Quat::<T>::new(0.0, 1.0, 0.0, 0.0);
+        let j = Quat::<T>::new(0.0, 0.0, 1.0, 0.0);
+        let k = Quat::<T>::new(0.0, 0.0, 0.0, 1.0);
+        assert_eq!(j * k, i);
+    });
+
+    scalar_test!(test_k_times_i_equals_j, |T| {
+        let i = Quat::<T>::new(0.0, 1.0, 0.0, 0.0);
+        let j = Quat::<T>::new(0.0, 0.0, 1.0, 0.0);
+        let k = Quat::<T>::new(0.0, 0.0, 0.0, 1.0);
+        assert_eq!(k * i, j);
+    });
+
+    scalar_test!(test_j_times_i_equals_negative_k, |T| {
+        let i = Quat::<T>::new(0.0, 1.0, 0.0, 0.0);
+        let j = Quat::<T>::new(0.0, 0.0, 1.0, 0.0);
+        let negative_k = Quat::<T>::new(0.0, 0.0, 0.0, -1.0);
+        assert_eq!(j * i, negative_k);
+    });
+
+    scalar_test!(test_pure_basic_quaternion_squared_is_negative_one, |T| {
+        let i = Quat::<T>::new(0.0, 1.0, 0.0, 0.0);
+        let negative_one = Quat::<T>::new(-1.0, 0.0, 0.0, 0.0);
+        assert_eq!(i * i, negative_one);
+    });
+
+    scalar_test!(test_quaternion_multiplication_is_not_commutative, |T| {
+        let a = Quat::<T>::new(1.0, 2.0, 3.0, 4.0);
+        let b = Quat::<T>::new(5.0, 6.0, 7.0, 8.0);
+        assert_ne!(a * b, b * a);
+    });
+
+    scalar_test!(test_quaternion_multiplication_is_associative, |T| {
+        let a = Quat::<T>::new(1.0, 2.0, 3.0, 4.0);
+        let b = Quat::<T>::new(-2.0, 0.5, 1.5, -3.0);
+        let c = Quat::<T>::new(4.0, -1.0, 2.0, 0.25);
+        let left = (a * b) * c;
+        let right = a * (b * c);
+
+        left.assert_near(right, T::TEST_EPS);
+    });
+
+    scalar_test!(test_axis_angle_normalizes_axis, |T| {
+        let angle = 0.75;
+        let unit_axis = Vec3::<T>::UNIT_X;
+        let scaled_axis = unit_axis * 25.0;
+
+        let from_unit = Quat::<T>::from_axis_angle(unit_axis, angle);
+        let from_scaled = Quat::<T>::from_axis_angle(scaled_axis, angle);
+
+        from_unit.assert_near(from_scaled, T::TEST_EPS);
+    });
+
+    scalar_test!(test_negative_angle_is_conjugate_of_positive_angle, |T| {
+        let axis = Vec3::<T>::new(1.0, 2.0, 3.0);
+
+        let angle = 0.75;
+
+        let positive = Quat::<T>::from_axis_angle(axis, angle);
+        let negative = Quat::<T>::from_axis_angle(axis, -angle);
+
+        negative.assert_near(positive.conjugate(), T::TEST_EPS);
+    });
+
+    scalar_test!(test_negative_axis_and_angle_produces_same_quaternion, |T| {
+        let axis = Vec3::<T>::new(1.0, 2.0, 3.0);
+        let angle = 0.75;
+
+        let positive = Quat::<T>::from_axis_angle(axis, angle);
+        let negative = Quat::<T>::from_axis_angle(-axis, -angle);
+
+        negative.assert_near(positive, T::TEST_EPS);
+    });
+
+    scalar_test!(
+        #[should_panic(expected = "cannot rotate around a zero-length axis direction")]
+        test_axis_angle_rejects_zero_axis, 
+        |T| {
+        let _ = Quat::<T>::from_axis_angle(Vec3::<T>::ZERO, T::PI);
     });
 
     scalar_test!(test_is_unit, |T| {

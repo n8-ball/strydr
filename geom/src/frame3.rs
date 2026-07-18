@@ -178,12 +178,11 @@ impl<T: Scalar> Frame3<T> {
     pub fn rotate_about_axis(self, axis: Axis3<T>, angle_radians: T) -> Self {
         let quat = Quat::from_axis_angle(axis.direction(), angle_radians);
 
-        let frm = Frame3::from_xyz(
+        Frame3::from_xyz(
             self.origin.rotate_about_axis(axis, angle_radians), 
             self.lx.rotate(quat), 
             self.ly.rotate(quat), 
-            self.lz.rotate(quat));
-        frm
+            self.lz.rotate(quat))
     }
 
     pub fn assert_near(self, other: Self, eps: T) {
@@ -497,8 +496,8 @@ mod tests {
         
         let expected = Frame3::from_xy(
             frm.origin, 
-            frm.lx * T::NEG_ONE, 
-            frm.ly * T::NEG_ONE, 
+            -frm.lx, 
+            -frm.ly, 
         );
 
         rotated.assert_near(expected, T::TEST_EPS);

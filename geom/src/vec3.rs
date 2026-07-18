@@ -83,7 +83,6 @@ impl<T: Scalar> Vec3<T> {
 
     pub fn length_squared(&self) -> T {
         self.dot(*self)
-         
     }
 
     pub fn length(self) -> T {
@@ -170,7 +169,7 @@ impl<T: Scalar> Vec3<T> {
     /// Primarily used when multiple Vec3s need to rotated, as a the Quaternion is not built internally.
     pub fn rotate(self, quat: Quat<T>) -> Self {
         assert!(quat.is_unit(), 
-        "quat must be unit!");
+        "quaternion must be unit-length!");
 
         let vector_quat = Quat::new(T::ZERO, self.x, self.y, self.z);
         let applied = quat * vector_quat * quat.conjugate();
@@ -685,12 +684,12 @@ mod tests {
     });
 
     scalar_test!(test_is_perpendicular_to_unit, |T| {
-        let unit_x_pos = Vec3::<T>::new(1.0, 0.0, 0.0);
-        let unit_y_pos = Vec3::<T>::new(0.0, 1.0, 0.0);
-        let unit_z_pos = Vec3::<T>::new(0.0, 0.0, 1.0);
-        let unit_x_neg = Vec3::<T>::new(-1.0, 0.0, 0.0);
-        let unit_y_neg = Vec3::<T>::new(0.0, -1.0, 0.0);
-        let unit_z_neg = Vec3::<T>::new(0.0, 0.0, -1.0);
+        let unit_x_pos = Vec3::<T>::UNIT_X;
+        let unit_y_pos = Vec3::<T>::UNIT_Y;
+        let unit_z_pos = Vec3::<T>::UNIT_Z;
+        let unit_x_neg = -Vec3::<T>::UNIT_X;
+        let unit_y_neg = -Vec3::<T>::UNIT_Y;
+        let unit_z_neg = -Vec3::<T>::UNIT_Z;
 
         assert!(unit_x_pos.is_perpendicular_to(unit_y_pos));
         assert!(unit_x_pos.is_perpendicular_to(unit_z_pos));
@@ -819,6 +818,95 @@ mod tests {
         rotated.assert_near(expected, T::TEST_ROTATION_EPS);
     });
 
+    scalar_test!(test_rotate_x_90_degree_around_z, |T| {
+        let q = Quat::<T>::from_axis_angle(
+            Vec3::<T>::UNIT_Z, T::PI_OVER_2);
+
+        let rotated = Vec3::<T>::UNIT_X.rotate(q);
+
+        rotated.assert_near(Vec3::<T>::UNIT_Y, T::TEST_EPS);
+    });
+
+    scalar_test!(test_rotate_y_90_degrees_around_x, |T| {
+        let q = Quat::<T>::from_axis_angle(
+            Vec3::<T>::UNIT_X, T::PI_OVER_2);
+
+        let rotated = Vec3::<T>::UNIT_Y.rotate(q);
+
+        rotated.assert_near(Vec3::<T>::UNIT_Z, T::TEST_EPS);
+    });
+
+    scalar_test!(test_rotate_z_90_degrees_around_y, |T| {
+        let q = Quat::<T>::from_axis_angle(
+            Vec3::<T>::UNIT_Y, T::PI_OVER_2);
+
+        let rotated = Vec3::<T>::UNIT_Z.rotate(q);
+
+        rotated.assert_near(Vec3::<T>::UNIT_X, T::TEST_EPS);
+    });
+
+    scalar_test!(test_rotate_leaves_axis_unchanged, |T| {
+        let axis = Vec3::<T>::new(1.0, 2.0, 3.0).normalize();
+
+        let q = Quat::<T>::from_axis_angle(axis, 1.234);
+
+        axis.rotate(q).assert_near(axis, T::TEST_EPS);
+    });
+
+    scalar_test!(test_rotate_preserves_vector_length, |T| {
+        let v = Vec3::<T>::new(4.0, -2.0, 7.0).normalize();
+
+        let q = Quat::<T>::from_axis_angle(Vec3::<T>::new(1.0, 2.0, 3.0), 1.234);
+        
+        let rotated = v.rotate(q);
+
+        assert!((rotated.length() - v.length()).abs() < T::TEST_EPS)
+    });
+
+    scalar_test!(test_inverse_rotation_restores_vector, |T| {
+        let v = Vec3::<T>::new(4.0, -2.0, 7.0).normalize();
+
+        let q = Quat::<T>::from_axis_angle(Vec3::<T>::new(1.0, 2.0, 3.0), 1.234);
+
+        let restored = v.rotate(q).rotate(q.inverse());
+
+        restored.assert_near(v, T::TEST_EPS);
+    });
+
+    scalar_test!(test_quaternion_composition_order, |T| {
+        let rotate_x = Quat::<T>::from_axis_angle(
+            Vec3::<T>::UNIT_X, T::PI_OVER_2);
+        
+        let rotate_z = Quat::<T>::from_axis_angle(
+            Vec3::<T>::UNIT_Z, T::PI_OVER_2);
+
+        let v = Vec3::<T>::UNIT_Y;
+
+        let sequential = v.rotate(rotate_x).rotate(rotate_z);
+
+        let combined = v.rotate(rotate_z * rotate_x);
+
+        combined.assert_near(sequential, T::TEST_EPS);
+        combined.assert_near(Vec3::<T>::UNIT_Z, T::TEST_EPS);
+    });
+
+    scalar_test!(test_quaternion_and_negation_rotate_identically, |T| {
+        let q = Quat::<T>::from_axis_angle(Vec3::<T>::new(1.0, 2.0, 3.0), 1.234);
+
+        let negative_q = Quat::<T>::new(
+            -q.w,
+            -q.x, 
+            -q.y,
+            -q.z
+        );
+
+        let v = Vec3::<T>::new(4.0, -2.0, 7.0);
+
+        v.rotate(q).assert_near(v.rotate(negative_q), T::TEST_EPS);
+    });
+
+
+
     scalar_test!(
         test_rotate_zero_vec, 
         |T| {
@@ -828,7 +916,7 @@ mod tests {
     });
 
     scalar_test!(
-        #[should_panic(expected = "quat must be unit!")]
+        #[should_panic(expected = "quaternion must be unit-length!")]
         test_rotation_rejects_non_unit_quat, 
         |T| {
         let v = Vec3::<T>::UNIT_X;
