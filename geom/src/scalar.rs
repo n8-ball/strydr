@@ -1,5 +1,5 @@
-use std::ops::{Add, Sub, Mul, Div, Neg};
 use std::fmt::{Debug, Display};
+use std::ops::{Add, Div, Mul, Neg, Sub};
 
 pub trait Scalar:
     Copy
@@ -13,31 +13,31 @@ pub trait Scalar:
     + Mul<Output = Self>
     + Div<Output = Self>
     + Neg<Output = Self>
-    {
-        const ZERO: Self;
-        const ONE: Self;
-        const NEG_ONE: Self;
-        const HALF: Self;
-        const EPSILON: Self;
-        const PI: Self;
-        const PI_OVER_2: Self;
-        const PI_OVER_4: Self;
+{
+    const ZERO: Self;
+    const ONE: Self;
+    const NEG_ONE: Self;
+    const HALF: Self;
+    const EPSILON: Self;
+    const PI: Self;
+    const PI_OVER_2: Self;
+    const PI_OVER_4: Self;
 
-        const MIN: Self;
-        const MAX: Self;
+    const MIN: Self;
+    const MAX: Self;
 
-        fn sqrt(self) -> Self; 
-        fn sin(self) -> Self;
-        fn cos(self) -> Self;
-        fn acos(self) -> Self;
-        fn atan2(self, other: Self) -> Self;
-        fn abs(self) -> Self;
+    fn sqrt(self) -> Self;
+    fn sin(self) -> Self;
+    fn cos(self) -> Self;
+    fn acos(self) -> Self;
+    fn atan2(self, other: Self) -> Self;
+    fn abs(self) -> Self;
 
-        fn from_f32(value: f32) -> Self; 
-        fn from_f64(value: f64) -> Self; 
+    fn from_f32(value: f32) -> Self;
+    fn from_f64(value: f64) -> Self;
 
-        fn clamp(self, min: Self, max: Self) -> Self;
-    }
+    fn clamp(self, min: Self, max: Self) -> Self;
+}
 
 impl Scalar for f32 {
     const ZERO: Self = 0.0;
@@ -70,19 +70,19 @@ impl Scalar for f32 {
     }
 
     fn atan2(self, other: Self) -> Self {
-        self.atan2(other) 
-    } 
+        self.atan2(other)
+    }
 
     fn abs(self) -> Self {
         self.abs()
     }
 
     fn from_f32(value: f32) -> Self {
-        value 
+        value
     }
 
     fn from_f64(value: f64) -> Self {
-        value as f32 
+        value as f32
     }
 
     fn clamp(self, min: Self, max: Self) -> Self {
@@ -118,24 +118,24 @@ impl Scalar for f64 {
     fn acos(self) -> Self {
         self.acos()
     }
-    
+
     fn atan2(self, other: Self) -> Self {
-        self.atan2(other) 
-    } 
+        self.atan2(other)
+    }
 
     fn abs(self) -> Self {
         self.abs()
     }
 
     fn from_f32(value: f32) -> Self {
-        value as f64 
+        value as f64
     }
 
     fn from_f64(value: f64) -> Self {
         value
     }
 
-    fn clamp(self, min: Self, max: Self) -> Self  {
+    fn clamp(self, min: Self, max: Self) -> Self {
         self.clamp(min, max)
     }
 }
@@ -159,7 +159,7 @@ impl TestScalar for f64 {
 macro_rules! scalar_test {
     (
         $(#[$attr:meta])*
-        $name:ident, 
+        $name:ident,
         |$t:ident| $body:block) => {
         mod $name {
             #[allow(unused_imports)] // This is needed to prevent an unused import warning on use super::*; for some reason.
@@ -181,7 +181,6 @@ macro_rules! scalar_test {
         }
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -221,6 +220,4 @@ mod tests {
         assert_eq!(test_scalar_generic_div::<f32>(1.0, 2.0), Scalar::HALF);
         assert_eq!(test_scalar_generic_div::<f64>(1.0, 2.0), Scalar::HALF);
     }
-
-
 }
