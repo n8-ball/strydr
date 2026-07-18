@@ -4,6 +4,13 @@ use std::{
     fmt::{Display, Formatter},
 };
 
+//      ^
+//      |
+//      |
+//      |
+//      |
+//      *
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Axis3<T: Scalar> {
     origin: Pt3<T>,

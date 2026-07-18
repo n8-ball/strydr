@@ -4,6 +4,13 @@ use std::{
     fmt::{Display, Formatter},
 };
 
+//      ^
+//     -|- - - -
+//   /  |     /
+//  /   *    /
+// /        /
+// - - - - -
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Plane<T: Scalar> {
     origin: Pt3<T>,

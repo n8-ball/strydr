@@ -59,7 +59,7 @@ impl<T: Scalar> Pt3<T> {
         (self - other).length()
     }
 
-    pub fn distance_sq_to(self, other: Self) -> T {
+    pub fn distance_squared_to(self, other: Self) -> T {
         (self - other).length_squared()
     }
 
@@ -299,7 +299,7 @@ mod tests {
         let expected =
             (b.x - a.x) * (b.x - a.x) + (b.y - a.y) * (b.y - a.y) + (b.z - a.z) * (b.z - a.z);
 
-        assert!((a.distance_sq_to(b) - expected).abs() < T::TEST_EPS);
+        assert!((a.distance_squared_to(b) - expected).abs() < T::TEST_EPS);
     }
 
     scalar_test!(test_distance_sq_to_scalar, |T| {

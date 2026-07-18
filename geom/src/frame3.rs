@@ -4,6 +4,12 @@ use std::{
     fmt::{Display, Formatter},
 };
 
+//      ^    -|
+//      |   /
+//      |  /
+//      | /
+//      * - - - - >
+
 /// Standard representation of all degrees of freedom in 3d space.
 ///
 /// Unlike other apis, this is highly opinionated.

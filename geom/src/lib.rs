@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 mod axis3;
+mod bbox3;
 mod frame3;
 mod plane;
 mod pt3;
@@ -14,3 +15,4 @@ pub use pt3::Pt3;
 pub use quat::Quat;
 pub use scalar::Scalar;
 pub use vec3::Vec3;
+pub use bbox3::Bbox3;
