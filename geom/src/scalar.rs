@@ -33,6 +33,8 @@ pub trait Scalar:
     fn atan2(self, other: Self) -> Self;
     fn abs(self) -> Self;
 
+    fn powi(self, n: i32) -> Self;
+
     fn max(self, other: Self) -> Self;
     fn min(self, other: Self) -> Self;
 
@@ -81,6 +83,10 @@ impl Scalar for f32 {
 
     fn abs(self) -> Self {
         self.abs()
+    }
+
+    fn powi(self, n: i32) -> Self {
+        self.powi(n)
     }
 
     fn max(self, other: Self) -> Self {
@@ -147,6 +153,10 @@ impl Scalar for f64 {
 
     fn abs(self) -> Self {
         self.abs()
+    }
+
+    fn powi(self, n: i32) -> Self {
+        self.powi(n)
     }
 
     fn max(self, other: Self) -> Self {
