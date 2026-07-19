@@ -1,12 +1,12 @@
 #![allow(dead_code)]
 mod axis3;
+pub mod bbox3;
 mod frame3;
 mod plane;
-mod pt3;
+pub mod pt3;
 mod quat;
 pub mod scalar;
 pub mod vec3;
-pub mod bbox3;
 
 pub use axis3::Axis3;
 pub use frame3::Frame3;

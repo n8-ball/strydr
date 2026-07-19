@@ -33,9 +33,15 @@ pub trait Scalar:
     fn atan2(self, other: Self) -> Self;
     fn abs(self) -> Self;
 
+    fn max(self, other: Self) -> Self;
+    fn min(self, other: Self) -> Self;
+
     fn from_f32(value: f32) -> Self;
     fn from_f64(value: f64) -> Self;
 
+    fn to_f64(self) -> f64;
+
+    fn round(self) -> Self;
     fn clamp(self, min: Self, max: Self) -> Self;
 }
 
@@ -77,12 +83,28 @@ impl Scalar for f32 {
         self.abs()
     }
 
+    fn max(self, other: Self) -> Self {
+        self.max(other)
+    }
+
+    fn min(self, other: Self) -> Self {
+        self.min(other)
+    }
+
     fn from_f32(value: f32) -> Self {
         value
     }
 
     fn from_f64(value: f64) -> Self {
         value as f32
+    }
+
+    fn to_f64(self) -> f64 {
+        self as f64
+    }
+
+    fn round(self) -> Self {
+        self.round()
     }
 
     fn clamp(self, min: Self, max: Self) -> Self {
@@ -127,12 +149,28 @@ impl Scalar for f64 {
         self.abs()
     }
 
+    fn max(self, other: Self) -> Self {
+        self.max(other)
+    }
+
+    fn min(self, other: Self) -> Self {
+        self.min(other)
+    }
+
     fn from_f32(value: f32) -> Self {
         value as f64
     }
 
     fn from_f64(value: f64) -> Self {
         value
+    }
+
+    fn to_f64(self) -> f64 {
+        self as f64
+    }
+
+    fn round(self) -> Self {
+        self.round()
     }
 
     fn clamp(self, min: Self, max: Self) -> Self {
