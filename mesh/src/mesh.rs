@@ -1,5 +1,9 @@
 use geom::{bbox3::Bbox3, pt3::Pt3, scalar::Scalar};
-use std::{collections::{HashMap, HashSet}, fs::File, io::{self, Write}};
+use std::{
+    collections::{HashMap, HashSet},
+    fs::File,
+    io::{self, Write},
+};
 
 #[derive(Hash, Eq, PartialEq, Copy, Clone)]
 pub struct Triangle(pub usize, pub usize, pub usize);
@@ -43,12 +47,10 @@ impl<T: Scalar> Mesh<T> {
         }
 
         // Degenerate triangle
-        if tri_idxs[0] == tri_idxs[1] 
-        || tri_idxs[0] == tri_idxs[2] 
-        || tri_idxs[1] == tri_idxs[2] {
+        if tri_idxs[0] == tri_idxs[1] || tri_idxs[0] == tri_idxs[2] || tri_idxs[1] == tri_idxs[2] {
             return;
         }
-            
+
         let triangle = Triangle::canonical_triangle(tri_idxs);
 
         if self.triangle_lookup.insert(triangle) {
@@ -85,9 +87,7 @@ impl<T: Scalar> Mesh<T> {
         Some(Bbox3::<T>::new(min, max))
     }
 
-    fn arrow() -> () {
-
-    }
+    fn arrow() -> () {}
 
     fn write_ascii_stl(&self, path: &str) -> io::Result<()> {
         let mut file = File::create(path)?;
@@ -98,7 +98,7 @@ impl<T: Scalar> Mesh<T> {
             let a = self.verticies[tri.0];
             let b = self.verticies[tri.1];
             let c = self.verticies[tri.2];
-            
+
             let u = b - a;
             let v = c - a;
 
