@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-mod dag;
+pub mod dag;
 mod ops;
 mod sdf;
 mod sphere;

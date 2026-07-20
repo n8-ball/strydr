@@ -17,5 +17,6 @@ version = "0.1.0"
 name = "mesh"
 version = "0.1.0"
 dependencies = [
+ "core",
  "geom",
 ]
