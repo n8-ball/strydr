@@ -1,5 +1,4 @@
-
-use geom::{Pt3, Scalar, bbox3::Bbox3};
+use geom::{Pt3, Scalar, Vec3, bbox3::Bbox3};
 
 use crate::{
     Sphere,
@@ -39,7 +38,7 @@ impl<T: Scalar> Graph<T> {
 
     pub fn union<A: Sdf<T>, B: Sdf<T>>(&mut self, a: A, b: B) -> BinaryOp {
         let id = self.nodes.len();
-        let node = BinaryOp{
+        let node = BinaryOp {
             id: NodeId(id),
             left: a.id(),
             right: b.id(),
@@ -50,7 +49,7 @@ impl<T: Scalar> Graph<T> {
 
     pub fn difference<A: Sdf<T>, B: Sdf<T>>(&mut self, a: A, b: B) -> BinaryOp {
         let id = self.nodes.len();
-        let node = BinaryOp{
+        let node = BinaryOp {
             id: NodeId(id),
             left: a.id(),
             right: b.id(),
@@ -61,7 +60,7 @@ impl<T: Scalar> Graph<T> {
 
     pub fn intersection<A: Sdf<T>, B: Sdf<T>>(&mut self, a: A, b: B) -> BinaryOp {
         let id = self.nodes.len();
-        let node = BinaryOp{
+        let node = BinaryOp {
             id: NodeId(id),
             left: a.id(),
             right: b.id(),
@@ -70,7 +69,8 @@ impl<T: Scalar> Graph<T> {
         node
     }
 
-    pub fn eval(&self, p: Pt3<T>) -> T {
+    #[must_use]
+    pub fn excecute(&self, p: Pt3<T>) -> T {
         let mut values = vec![T::ZERO; self.nodes.len()];
 
         for (i, node) in self.nodes.iter().enumerate() {
@@ -78,8 +78,12 @@ impl<T: Scalar> Graph<T> {
                 Node::Background => T::ZERO,
                 Node::Sphere(sphere) => sphere.signed_distance(p),
                 Node::Union(node) => ops::union(values[node.left.0], values[node.right.0]),
-                Node::Difference(node) => ops::difference(values[node.left.0], values[node.right.0]),
-                Node::Intersection(node) => ops::intersection(values[node.left.0], values[node.right.0]),
+                Node::Difference(node) => {
+                    ops::difference(values[node.left.0], values[node.right.0])
+                }
+                Node::Intersection(node) => {
+                    ops::intersection(values[node.left.0], values[node.right.0])
+                }
             }
         }
 
@@ -87,18 +91,38 @@ impl<T: Scalar> Graph<T> {
     }
 
     #[must_use]
+    pub fn calculate_normal_finite_difference(&self, p: Pt3<T>, resolution: T) -> Vec3<T> {
+        let eps = T::from_f64(0.001) * resolution;
+
+        let dx = self.excecute(Pt3::<T>::new(p.x + eps, p.y, p.z))
+            - self.excecute(Pt3::<T>::new(p.x - eps, p.y, p.z));
+
+        let dy = self.excecute(Pt3::<T>::new(p.x, p.y + eps, p.z))
+            - self.excecute(Pt3::<T>::new(p.x, p.y - eps, p.z));
+
+        let dz = self.excecute(Pt3::<T>::new(p.x, p.y, p.z + eps))
+            - self.excecute(Pt3::<T>::new(p.x, p.y, p.z - eps));
+
+        Vec3::<T>::new(dx, dy, dz).normalize()
+    }
+
+    #[must_use]
     pub fn estimate_bbox(&self) -> Bbox3<T> {
-        let mut bbox3s= vec![Bbox3::<T>::ZERO; self.nodes.len()];
+        let mut bbox3s = vec![Bbox3::<T>::ZERO; self.nodes.len()];
 
         for (i, node) in self.nodes.iter().enumerate() {
             bbox3s[i] = match node {
                 Node::Background => Bbox3::<T>::ZERO,
                 Node::Sphere(sphere) => sphere.calculate_bbox(),
                 Node::Union(node) => Bbox3::union(bbox3s[node.left.0], bbox3s[node.right.0]),
-                Node::Difference(node) => Bbox3::difference(bbox3s[node.left.0], bbox3s[node.right.0]),
-                Node::Intersection(node) => Bbox3::intersection(bbox3s[node.left.0], bbox3s[node.right.0]),
+                Node::Difference(node) => {
+                    Bbox3::difference(bbox3s[node.left.0], bbox3s[node.right.0])
+                }
+                Node::Intersection(node) => {
+                    Bbox3::intersection(bbox3s[node.left.0], bbox3s[node.right.0])
+                }
             }
-        };
+        }
 
         bbox3s[self.nodes.len() - 1]
     }
@@ -117,7 +141,7 @@ impl<T: Scalar> Graph<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use geom::{pt3::{Pt3}, scalar_test};
+    use geom::{pt3::Pt3, scalar_test};
 
     scalar_test!(test_new, |T| {
         let g = Graph::<T>::new();
@@ -140,9 +164,9 @@ mod tests {
         let sample_boundary = Pt3::<T>::new(radius, 0.0, 0.0);
         let sample_between = Pt3::<T>::new(radius * 0.5, 0.0, 0.0);
 
-        assert_eq!(g.eval(sample_origin), -radius);
-        assert_eq!(g.eval(sample_boundary), 0.0);
-        assert_eq!(g.eval(sample_between), -radius * 0.5);
+        assert_eq!(g.excecute(sample_origin), -radius);
+        assert_eq!(g.excecute(sample_boundary), 0.0);
+        assert_eq!(g.excecute(sample_between), -radius * 0.5);
     });
 
     scalar_test!(test_bool_add_basic, |T| {
@@ -160,23 +184,23 @@ mod tests {
         assert_eq!(g.node_count(), 4);
 
         // Center of first sphere
-        assert_eq!(g.eval(origin1), -radius);
+        assert_eq!(g.excecute(origin1), -radius);
 
         // Center of second sphere
-        assert_eq!(g.eval(origin2), -radius);
+        assert_eq!(g.excecute(origin2), -radius);
 
         // Touching point between spheres
-        assert_eq!(g.eval(Pt3::ZERO), T::ZERO);
+        assert_eq!(g.excecute(Pt3::ZERO), T::ZERO);
 
         // Inside first sphere only
         let p = Pt3::<T>::new(-radius * T::from_f32(1.5), T::ZERO, T::ZERO);
 
-        assert_eq!(g.eval(p), -radius * T::from_f32(0.5));
+        assert_eq!(g.excecute(p), -radius * T::from_f32(0.5));
 
         // Outside both
         let outside = Pt3::<T>::new(radius * T::from_f32(3.0), T::ZERO, T::ZERO);
 
-        assert_eq!(g.eval(outside), radius);
+        assert_eq!(g.excecute(outside), radius);
     });
 
     scalar_test!(test_add_sphere_and_calculate_bbox, |T| {

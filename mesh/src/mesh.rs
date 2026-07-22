@@ -1,4 +1,4 @@
-use geom::{bbox3::Bbox3, pt3::Pt3, scalar::Scalar};
+use geom::{Frame3, bbox3::Bbox3, pt3::Pt3, scalar::Scalar};
 use std::{
     collections::{HashMap, HashSet},
     fs::File,
@@ -87,7 +87,18 @@ impl<T: Scalar> Mesh<T> {
         Some(Bbox3::<T>::new(min, max))
     }
 
-    fn arrow() -> () {}
+    pub fn transform_between_frames(&self, source: Frame3<T>, destination: Frame3<T>) -> Self {
+        let mut new_mesh = Mesh::new();
+
+        for tri in &self.triangles{
+            new_mesh.add_triangle(
+                [self.verticies[tri.0].map_between_frames(source, destination),
+                self.verticies[tri.1].map_between_frames(source, destination),
+                self.verticies[tri.2].map_between_frames(source, destination)]
+            );  
+        };
+        new_mesh
+    }
 
     fn write_ascii_stl(&self, path: &str) -> io::Result<()> {
         let mut file = File::create(path)?;
@@ -220,5 +231,30 @@ mod tests {
         }
 
         assert_eq!(mesh.triangle_count(), 1000);
+    });
+
+    scalar_test!(test_transform_single_triangle_between_frame, |T| {
+        let mut mesh = Mesh::<T>::new();
+
+        let source = Frame3::<T>::IDENTITY;
+
+
+        let destination = Frame3::<T>::from_xz(
+            Pt3::<T>::new(10.0, 10.0, 10.0),
+            geom::Vec3::<T>::new(0.0, 0.0, 1.0),
+            geom::Vec3::<T>::new(1.0, 0.0, 0.0));
+
+        mesh.add_triangle([
+            Pt3::<T>::ZERO,
+            Pt3::<T>::new(10.0, 0.0, 0.0),
+            Pt3::<T>::new(0.0, 10.0, 0.0),
+            ]);
+
+        let translated = mesh.transform_between_frames(source, destination);
+
+        assert_eq!(mesh.triangle_count(), translated.triangle_count());
+        assert_eq!(mesh.vertex_count(), translated.vertex_count());
+        assert_eq!(translated.verticies[0], Pt3::<T>::new(10.0, 10.0, 10.0));
+
     });
 }

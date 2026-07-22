@@ -83,18 +83,18 @@ impl<T: Scalar> Pt3<T> {
         }
     }
 
-    pub fn transform_between_frames(self, source: Frame3<T>, destination: Frame3<T>) -> Self {
-        let world =
-            source.origin() + source.lx() * self.x + source.ly() * self.y + source.lz() * self.z;
+    pub fn map_between_frames(self, source: Frame3<T>, destination: Frame3<T>) -> Self {
+        let delta = self - source.origin();
 
-        let delta = world - destination.origin();
+        let x = delta.dot(source.lx());
+        let y = delta.dot(source.ly());
+        let z = delta.dot(source.lz());
 
-        Self {
-            x: delta.dot(destination.lx()),
-            y: delta.dot(destination.ly()),
-            z: delta.dot(destination.lz()),
+        destination.origin()
+            + destination.lx() * x
+            + destination.ly() * y
+            + destination.lz() * z
         }
-    }
 
     pub fn rotate_about_axis(self, axis: Axis3<T>, angle_radians: T) -> Self {
         let from_axis = self - axis.origin();
@@ -105,6 +105,23 @@ impl<T: Scalar> Pt3<T> {
         let rotated_dir = from_axis.rotate_axis_angle(axis.direction(), angle_radians);
 
         axis.origin() + rotated_dir
+    }
+
+    pub fn average(pts: &Vec<Self>) -> Self {
+        let mut average = Pt3::<T>::ZERO;
+        let len = T::from_f64(pts.len() as f64);
+
+        for p in pts {
+            average.x += p.x;
+            average.y += p.y;
+            average.z += p.z;
+        };
+
+        average.x /= len;
+        average.y /= len;
+        average.z /= len;
+
+        average
     }
 
     pub fn assert_near(self, b: Pt3<T>, eps: T) {
@@ -384,8 +401,18 @@ mod tests {
         let p = Pt3::<T>::new(1.0, 1.0, 1.0);
         let expected = Pt3::<T>::new(-1.0, -1.0, 1.0);
 
-        p.transform_between_frames(source, destination)
+        p.map_between_frames(source, destination)
             .assert_near(expected, T::TEST_EPS);
+    });
+
+    scalar_test!(test_transform_between_frames_translate_only, |T| {
+        let source = Frame3::<T>::IDENTITY;
+        let destination = source.translate(Vec3::<T>::new(10.0, 10.0, 10.0));
+
+        let p = Pt3::<T>::ZERO;
+        let translated = p.map_between_frames(source, destination);
+
+        assert_eq!(translated, Pt3::<T>::new(10.0, 10.0, 10.0));
     });
 
     scalar_test!(test_transform_between_rotated_frames, |T| {
@@ -397,9 +424,9 @@ mod tests {
         );
 
         let p = Pt3::<T>::new(2.0, 3.0, 4.0);
-        let expected = Pt3::<T>::new(3.0, 8.0, 4.0);
+        let expected = Pt3::<T>::new(7.0, 2.0, 4.0);
 
-        p.transform_between_frames(source, destination)
+        p.map_between_frames(source, destination)
             .assert_near(expected, T::TEST_EPS);
     });
 
@@ -412,8 +439,8 @@ mod tests {
         );
 
         let p = Pt3::<T>::new(12.0, 3.0, -8.0);
-        let t1 = p.transform_between_frames(source, destination);
-        t1.transform_between_frames(destination, source)
+        let t1 = p.map_between_frames(source, destination);
+        t1.map_between_frames(destination, source)
             .assert_near(p, T::TEST_EPS);
     });
 
@@ -442,6 +469,27 @@ mod tests {
 
         rotated.assert_near(expected, T::TEST_ROTATION_EPS);
     });
+
+    scalar_test!(test_average_box_corners, |T| {
+        let pts = vec! 
+        [
+            Pt3::<T>::ZERO,
+            Pt3::<T>::new(10.0, 0.0, 0.0),
+            Pt3::<T>::new(0.0, 10.0, 0.0),
+            Pt3::<T>::new(10.0, 10.0, 0.0),
+            Pt3::<T>::new(0.0, 0.0, 10.0),
+            Pt3::<T>::new(10.0, 0.0, 10.0),
+            Pt3::<T>::new(0.0, 10.0, 10.0),
+            Pt3::<T>::new(10.0, 10.0, 10.0),
+        ];
+
+        let average = Pt3::<T>::average(&pts);
+        let expected = Pt3::<T>::new(5.0, 5.0, 5.0);
+
+        average.assert_near(expected, T::TEST_EPS);
+    });
+
+
 
     scalar_test!(test_print, |T| {
         let p = Pt3::<T>::new(1.0, 2.0, 3.0);

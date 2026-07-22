@@ -1,5 +1,7 @@
 #![allow(dead_code)]
-mod mesh;
+mod cell;
 mod dual_contour;
+mod mesh;
+mod qef;
 
 pub use mesh::Mesh;

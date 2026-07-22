@@ -3,7 +3,7 @@ use geom::Scalar;
 use crate::dag::NodeId;
 
 #[derive(Debug, Clone, Copy)]
-pub struct BinaryOp{
+pub struct BinaryOp {
     pub id: NodeId,
     pub left: NodeId,
     pub right: NodeId,
@@ -19,5 +19,3 @@ pub fn difference<T: Scalar>(a: T, b: T) -> T {
 pub fn intersection<T: Scalar>(a: T, b: T) -> T {
     a.max(b)
 }
-
-

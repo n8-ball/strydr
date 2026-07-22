@@ -1,5 +1,5 @@
 use std::fmt::{Debug, Display};
-use std::ops::{Add, Div, Mul, Neg, Sub};
+use std::ops::{Add, AddAssign, Div, DivAssign, Mul, Neg, Sub};
 
 pub trait Scalar:
     Copy
@@ -9,9 +9,11 @@ pub trait Scalar:
     + PartialEq
     + PartialOrd
     + Add<Output = Self>
+    + AddAssign
     + Sub<Output = Self>
     + Mul<Output = Self>
     + Div<Output = Self>
+    + DivAssign
     + Neg<Output = Self>
 {
     const ZERO: Self;
@@ -45,6 +47,8 @@ pub trait Scalar:
 
     fn round(self) -> Self;
     fn clamp(self, min: Self, max: Self) -> Self;
+
+    fn is_finite(self) -> bool;
 }
 
 impl Scalar for f32 {
@@ -116,6 +120,10 @@ impl Scalar for f32 {
     fn clamp(self, min: Self, max: Self) -> Self {
         self.clamp(min, max)
     }
+
+    fn is_finite(self) -> bool {
+        self.is_finite() 
+    }
 }
 
 impl Scalar for f64 {
@@ -185,6 +193,10 @@ impl Scalar for f64 {
 
     fn clamp(self, min: Self, max: Self) -> Self {
         self.clamp(min, max)
+    }
+
+    fn is_finite(self) -> bool {
+        self.is_finite() 
     }
 }
 

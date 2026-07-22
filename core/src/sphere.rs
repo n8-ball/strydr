@@ -27,6 +27,7 @@ impl<T: Scalar> Sphere<T> {
     pub fn radius(self) -> T {
         self.radius
     }
+
     pub fn calculate_bbox(&self) -> Bbox3<T> {
         let max = Pt3::new(
             self.origin.x + self.radius,
